@@ -1,30 +1,19 @@
-import Media from "../models/Media.js";
+import { Media } from "../models/Media.js";
 
-const DEFAULT_LIMIT = 12;
-const MAX_LIMIT = 50;
+const normalizeLimit = (limit, defaultValue = 20, max = 100) => {
+  const parsed = Number(limit);
 
-export const normalizeLimit = (value) => {
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed)) return DEFAULT_LIMIT;
-  return Math.min(Math.max(parsed, 1), MAX_LIMIT);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return defaultValue;
+  }
+
+  return Math.min(parsed, max);
 };
 
 export const mediaRepository = {
-  async findLatest(filter = {}, { limit = DEFAULT_LIMIT } = {}) {
-    return Media.find(filter)
-      .sort({ releaseYear: -1, createdAt: -1 })
-      .limit(normalizeLimit(limit))
-      .lean();
-  },
+  async findAll({ filter = {}, sort = "latest", limit = 20 } = {}) {
+    const normalizedLimit = normalizeLimit(limit);
 
-  async findTopImdb({ limit = DEFAULT_LIMIT } = {}) {
-    return Media.find({ "rating.imdb": { $exists: true } })
-      .sort({ "rating.imdb": -1 })
-      .limit(normalizeLimit(limit))
-      .lean();
-  },
-
-  async findByFilter(filter = {}, { sort, limit } = {}) {
     const sortOption =
       sort === "rating"
         ? { "rating.imdb": -1 }
@@ -32,17 +21,44 @@ export const mediaRepository = {
           ? { releaseYear: 1 }
           : { releaseYear: -1, createdAt: -1 };
 
-    return Media.find(filter)
-      .sort(sortOption)
-      .limit(normalizeLimit(limit))
-      .lean();
+    return Media.find(filter).sort(sortOption).limit(normalizedLimit).lean();
   },
 
   async findBySlug(slug) {
     return Media.findOne({ slug })
-      .populate("crew.directors", "id name")
-      .populate("crew.writers", "id name")
-      .populate("crew.actors.actor", "id name")
+      .populate("credits.cast.person", "name slug avatar primaryProfessions")
+      .populate("credits.directors", "name slug avatar primaryProfessions")
+      .populate("credits.writers", "name slug avatar primaryProfessions")
       .lean();
+  },
+
+  async findTop10(limit = 10) {
+    return Media.find({ isTop10: true })
+      .sort({ "rating.imdb": -1, createdAt: -1 })
+      .limit(normalizeLimit(limit, 10, 20))
+      .lean();
+  },
+
+  async findUpcoming(limit = 10) {
+    return Media.find({ isUpcoming: true })
+      .sort({ releaseYear: 1, createdAt: -1 })
+      .limit(normalizeLimit(limit, 10, 20))
+      .lean();
+  },
+
+  async findTopImdb(limit = 10) {
+    return Media.find({
+      "rating.imdb": { $ne: null, $type: "number" },
+    })
+      .sort({ "rating.imdb": -1, createdAt: -1 })
+      .limit(normalizeLimit(limit, 10, 20))
+      .lean();
+  },
+
+  async findByCustomFilter(
+    filter,
+    { limit = 20, sort = { createdAt: -1 } } = {},
+  ) {
+    return Media.find(filter).sort(sort).limit(normalizeLimit(limit)).lean();
   },
 };

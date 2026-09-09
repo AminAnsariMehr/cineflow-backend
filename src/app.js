@@ -3,21 +3,27 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
-// ---------------------Middlewares ---------------------
+import { env } from "./config/env.js";
+
+// --------------------- Middlewares ---------------------
 import {
   errorHandler,
   notFoundHandler,
 } from "./middlewares/error.middleware.js";
 
-// ---------------- Module Registration -----------------
+// ----------------------- Module ------------------------
 import { mediaModule } from "./modules/media/media.module.js";
-import { actorsModule } from "./modules/actors/actors.module.js";
+import { peopleModule } from "./modules/people/people.module.js";
 
 const app = express();
 
-const allowedOrigins = process.env.CORS_ORIGIN.split(",").map((item) =>
-  item.trim(),
-);
+const allowedOrigins =
+  env.corsOrigin === "*"
+    ? "*"
+    : env.corsOrigin
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
 
 app.use(helmet());
 app.use(express.json());
@@ -46,9 +52,11 @@ app.get("/health", (req, res) => {
   });
 });
 
+// -------- Module Registration ----------
 mediaModule(app);
-actorsModule(app);
+peopleModule(app);
 
+// ------ Middleware Registration --------
 app.use(notFoundHandler);
 app.use(errorHandler);
 

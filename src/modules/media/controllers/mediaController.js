@@ -1,82 +1,92 @@
 import { mediaService } from "../services/mediaService.js";
 
 export const mediaController = {
-  getAnimations: async (req, res, next) => {
+  async getAllMedia(req, res, next) {
     try {
-      const data = await mediaService.getAnimations();
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      next(error);
-    }
-  },
+      const data = await mediaService.getAllMedia(req.query);
 
-  getPersianDubbed: async (req, res, next) => {
-    try {
-      const data = await mediaService.getPersianDubbed();
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  getLatestSeries: async (req, res, next) => {
-    try {
-      const data = await mediaService.getLatestSeries();
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  getLatestMovies: async (req, res, next) => {
-    try {
-      const data = await mediaService.getLatestMovies();
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  getLatestMedia: async (req, res, next) => {
-    try {
-      const data = await mediaService.getLatestMedia();
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  getImdbTop: async (req, res, next) => {
-    try {
-      const data = await mediaService.getImdbTop();
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  getAllMedia: async (req, res, next) => {
-    try {
-      const { type, genre, year, language, sort, limit = 12 } = req.query;
-      const data = await mediaService.getAllMedia({
-        type,
-        genre,
-        year,
-        language,
-        sort,
-        limit,
+      res.json({
+        success: true,
+        data,
       });
-      res.status(200).json({ success: true, data });
     } catch (error) {
       next(error);
     }
   },
 
-  getMediaBySlug: async (req, res, next) => {
+  async getMediaBySlug(req, res, next) {
     try {
-      const { slug } = req.params;
-      const data = await mediaService.getMediaBySlug(slug);
-      res.status(200).json({ success: true, data });
+      const data = await mediaService.getMediaBySlug(req.params.slug);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getTop10Media(req, res, next) {
+    try {
+      const data = await mediaService.getTop10Media(req.query.limit);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getUpcomingMedia(req, res, next) {
+    try {
+      const data = await mediaService.getUpcomingMedia(req.query.limit);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getTopImdbMedia(req, res, next) {
+    try {
+      const data = await mediaService.getTopImdbMedia(req.query.limit);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getAnimations(req, res, next) {
+    try {
+      const data = await mediaService.getAnimations(req.query.limit);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getPersianDubbed(req, res, next) {
+    try {
+      const data = await mediaService.getPersianDubbed(req.query.limit);
+
+      res.json({
+        success: true,
+        data,
+      });
     } catch (error) {
       next(error);
     }

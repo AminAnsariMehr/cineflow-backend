@@ -1,21 +1,17 @@
 import "dotenv/config";
-import { validateEnv } from "./config/env.js";
 import app from "./app.js";
-import connectDB from "./config/db.js";
-
-validateEnv();
-
-const PORT = process.env.PORT || 5000;
+import { env } from "./config/env.js";
+import { connectDB } from "./config/db.js";
 
 const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Cineflow API running on http://localhost:${PORT}`);
+    app.listen(env.port, () => {
+      console.log(`Server running on http://localhost:${env.port}`);
     });
   } catch (error) {
-    console.error(`❌ Server startup failed: ${error.message}`);
+    console.error("Failed to start server:", error.message);
     process.exit(1);
   }
 };

@@ -1,12 +1,9 @@
-export const notFoundHandler = (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
-};
+import { env } from "../config/env.js";
 
 export const errorHandler = (err, req, res, next) => {
-  console.error(err);
+  if (env.nodeEnv !== "test") {
+    console.error(err);
+  }
 
   if (err.name === "ValidationError") {
     return res.status(400).json({
@@ -32,6 +29,9 @@ export const errorHandler = (err, req, res, next) => {
 
   return res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || "Internal Server Error",
+    message:
+      env.nodeEnv === "production"
+        ? "Internal Server Error"
+        : err.message || "Internal Server Error",
   });
 };

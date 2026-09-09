@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { actorsController } from "../controllers/peopleController.js";
+import { peopleController } from "../controllers/peopleController.js";
 
 const router = Router();
 
-router.get("/", actorsController.getAllActors);
+router.get("/", peopleController.getAllPeople);
+router.get("/:slug", peopleController.getPersonBySlug);
 
 export default router;
