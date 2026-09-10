@@ -1,51 +1,32 @@
 import { peopleRepository } from "../repositories/peopleRepository.js";
+import { mediaRepository } from "../../media/repositories/mediaRepository.js";
+import { NotFoundError } from "../../../shared/errors/AppError.js";
+import {
+  toPersonDetailsDto,
+  toFilmographyItemDto,
+} from "../mappers/peopleMapper.js";
 
 export const peopleService = {
-  async getAllPeople(query = {}) {
-    return peopleRepository.findAll({ limit: query.limit });
+  async getAllPeople(query) {
+    const people = await peopleRepository.findAll(query);
+    return people.map(toPersonDetailsDto);
   },
 
   async getPersonBySlug(slug) {
     const person = await peopleRepository.findBySlug(slug);
-
     if (!person) {
-      const error = new Error("Person not found");
-      error.statusCode = 404;
-      throw error;
+      throw new NotFoundError(`Person with slug '${slug}' not found`);
     }
 
-    const filmography = await peopleRepository.findFilmographyByPersonId(
+    const rawFilmography = await mediaRepository.findFilmographyByPersonId(
       person._id,
     );
 
-    const normalizedAsCast = filmography.asCast.map((media) => {
-      const targetPersonId = String(person._id);
-
-      const matchedCastEntry = media.credits?.cast?.find((item) => {
-        const currentId = item.person?._id ? item.person._id : item.person;
-        return String(currentId) === targetPersonId;
-      });
-
-      return {
-        _id: media._id,
-        id: media.id,
-        slug: media.slug,
-        title: media.title,
-        releaseYear: media.releaseYear,
-        poster: media.poster,
-        type: media.type,
-        rating: media.rating,
-        character: matchedCastEntry?.character || null,
-      };
-    });
-
     return {
-      person,
-      filmography: {
-        asCast: normalizedAsCast,
-        asDirector: filmography.asDirector,
-        asWriter: filmography.asWriter,
-      },
+      person: toPersonDetailsDto(person),
+      filmography: rawFilmography.map((media) =>
+        toFilmographyItemDto(media, person._id),
+      ),
     };
   },
 };

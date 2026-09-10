@@ -1,37 +1,39 @@
 import { env } from "../config/env.js";
 
+export const notFoundHandler = (req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
+};
+
 export const errorHandler = (err, req, res, next) => {
   if (env.nodeEnv !== "test") {
     console.error(err);
   }
 
-  if (err.name === "ValidationError") {
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-    });
-  }
+  let statusCode =
+    err.statusCode ||
+    (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
+
+  let message = err.message || "Internal Server Error";
 
   if (err.name === "CastError") {
-    return res.status(400).json({
-      success: false,
-      message: `Invalid value for field: ${err.path}`,
-    });
+    statusCode = 400;
+    message = `Invalid format for field: ${err.path}`;
+  } else if (err.name === "ValidationError") {
+    statusCode = 400;
+    message = Object.values(err.errors)
+      .map((item) => item.message)
+      .join(", ");
+  } else if (err.code === 11000) {
+    statusCode = 409;
+    const duplicatedField = Object.keys(err.keyValue || {})[0] || "field";
+    message = `Duplicate value for ${duplicatedField}`;
   }
 
-  if (err.code === 11000) {
-    const field = err.keyValue ? Object.keys(err.keyValue)[0] : "unknown";
-    return res.status(409).json({
-      success: false,
-      message: `Duplicate value for field: ${field}`,
-    });
-  }
-
-  return res.status(err.statusCode || 500).json({
+  return res.status(statusCode).json({
     success: false,
-    message:
-      env.nodeEnv === "production"
-        ? "Internal Server Error"
-        : err.message || "Internal Server Error",
+    message,
+    ...(env.nodeEnv === "development" && { stack: err.stack }),
   });
 };

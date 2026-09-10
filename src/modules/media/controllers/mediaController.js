@@ -4,11 +4,7 @@ export const mediaController = {
   async getAllMedia(req, res, next) {
     try {
       const data = await mediaService.getAllMedia(req.query);
-
-      res.json({
-        success: true,
-        data,
-      });
+      res.json({ success: true, count: data.length, data });
     } catch (error) {
       next(error);
     }
@@ -17,50 +13,34 @@ export const mediaController = {
   async getMediaBySlug(req, res, next) {
     try {
       const data = await mediaService.getMediaBySlug(req.params.slug);
-
-      res.json({
-        success: true,
-        data,
-      });
+      res.json({ success: true, data });
     } catch (error) {
       next(error);
     }
   },
 
-  async getTop10Media(req, res, next) {
+  async getTop10(req, res, next) {
     try {
-      const data = await mediaService.getTop10Media(req.query.limit);
-
-      res.json({
-        success: true,
-        data,
-      });
+      const data = await mediaService.getTop10(req.query);
+      res.json({ success: true, count: data.length, data });
     } catch (error) {
       next(error);
     }
   },
 
-  async getUpcomingMedia(req, res, next) {
+  async getTopImdb(req, res, next) {
     try {
-      const data = await mediaService.getUpcomingMedia(req.query.limit);
-
-      res.json({
-        success: true,
-        data,
-      });
+      const data = await mediaService.getTopImdb(req.query);
+      res.json({ success: true, count: data.length, data });
     } catch (error) {
       next(error);
     }
   },
 
-  async getTopImdbMedia(req, res, next) {
+  async getUpcoming(req, res, next) {
     try {
-      const data = await mediaService.getTopImdbMedia(req.query.limit);
-
-      res.json({
-        success: true,
-        data,
-      });
+      const data = await mediaService.getUpcoming(req.query);
+      res.json({ success: true, count: data.length, data });
     } catch (error) {
       next(error);
     }
@@ -68,12 +48,8 @@ export const mediaController = {
 
   async getAnimations(req, res, next) {
     try {
-      const data = await mediaService.getAnimations(req.query.limit);
-
-      res.json({
-        success: true,
-        data,
-      });
+      const data = await mediaService.getAnimations(req.query);
+      res.json({ success: true, count: data.length, data });
     } catch (error) {
       next(error);
     }
@@ -81,12 +57,8 @@ export const mediaController = {
 
   async getPersianDubbed(req, res, next) {
     try {
-      const data = await mediaService.getPersianDubbed(req.query.limit);
-
-      res.json({
-        success: true,
-        data,
-      });
+      const data = await mediaService.getPersianDubbed(req.query);
+      res.json({ success: true, count: data.length, data });
     } catch (error) {
       next(error);
     }

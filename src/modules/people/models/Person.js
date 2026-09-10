@@ -1,28 +1,5 @@
+// src/modules/people/models/Person.js
 import mongoose from "mongoose";
-
-const requiredLocalizedStringSchema = new mongoose.Schema(
-  {
-    fa: { type: String, trim: true },
-    en: { type: String, trim: true, required: true },
-  },
-  { _id: false },
-);
-
-const optionalLocalizedStringSchema = new mongoose.Schema(
-  {
-    fa: { type: String, trim: true },
-    en: { type: String, trim: true },
-  },
-  { _id: false },
-);
-
-const imageSchema = new mongoose.Schema(
-  {
-    url: { type: String, required: true, trim: true },
-    alt: { type: String, trim: true, default: "" },
-  },
-  { _id: false },
-);
 
 const personSchema = new mongoose.Schema(
   {
@@ -30,33 +7,64 @@ const personSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
       trim: true,
     },
     slug: {
       type: String,
       required: true,
       unique: true,
-      index: true,
       trim: true,
       lowercase: true,
     },
-    name: requiredLocalizedStringSchema,
-    biography: optionalLocalizedStringSchema,
-    birthDate: { type: Date, default: null },
-    birthPlace: optionalLocalizedStringSchema,
-    deathDate: { type: Date, default: null },
-    avatar: imageSchema,
-    primaryProfessions: [
-      {
-        type: String,
-        enum: ["actor", "director", "writer", "producer", "composer"],
-      },
-    ],
+    name: {
+      fa: { type: String, required: true, trim: true },
+      en: { type: String, required: true, trim: true },
+    },
+    biography: {
+      fa: { type: String, default: "", trim: true },
+      en: { type: String, default: "", trim: true },
+    },
+    birthDate: {
+      type: String,
+      default: null,
+    },
+    birthPlace: {
+      fa: { type: String, default: "", trim: true },
+      en: { type: String, default: "", trim: true },
+    },
+    deathDate: {
+      type: String,
+      default: null,
+    },
+    avatar: {
+      type: String,
+      default: "",
+    },
+    primaryProfessions: [{ type: String, trim: true }],
   },
   {
     timestamps: true,
+    suppressReservedKeysWarning: true,
+    toJSON: {
+      virtuals: true,
+      transform: (_, ret) => {
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      transform: (_, ret) => {
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
   },
 );
+
+personSchema.index({ "name.en": 1 });
+personSchema.index({ "name.fa": 1 });
 
 export const Person = mongoose.model("Person", personSchema);

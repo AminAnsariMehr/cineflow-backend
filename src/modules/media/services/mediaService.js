@@ -1,88 +1,43 @@
 import { mediaRepository } from "../repositories/mediaRepository.js";
-
-const ALLOWED_TYPES = ["movie", "series"];
-const ALLOWED_SORTS = ["latest", "oldest", "rating"];
+import { NotFoundError } from "../../../shared/errors/AppError.js";
+import { toMediaListDto, toMediaDetailsDto } from "../mappers/mediaMapper.js";
 
 export const mediaService = {
-  async getAllMedia(query = {}) {
-    const { type, genre, language, sort = "latest", limit = 20 } = query;
-
-    const filter = {};
-
-    if (type) {
-      if (!ALLOWED_TYPES.includes(type)) {
-        const error = new Error("Type must be either 'movie' or 'series'");
-        error.statusCode = 400;
-        throw error;
-      }
-
-      filter.type = type;
-    }
-
-    if (sort && !ALLOWED_SORTS.includes(sort)) {
-      const error = new Error("Sort must be one of: latest, oldest, rating");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (genre) {
-      const genres = genre.split(",").map((item) => item.trim());
-      filter.genres = { $in: genres };
-    }
-
-    if (language) {
-      const languages = language.split(",").map((item) => item.trim());
-      filter.languages = { $in: languages };
-    }
-
-    return mediaRepository.findAll({ filter, sort, limit });
+  async getAllMedia(query) {
+    const items = await mediaRepository.findAll(query);
+    return items.map(toMediaListDto);
   },
 
   async getMediaBySlug(slug) {
-    const media = await mediaRepository.findBySlug(slug);
-
-    if (!media) {
-      const error = new Error("Media not found");
-      error.statusCode = 404;
-      throw error;
+    const item = await mediaRepository.findBySlug(slug);
+    if (!item) {
+      throw new NotFoundError(`Media with slug '${slug}' not found`);
     }
-
-    return media;
+    return toMediaDetailsDto(item);
   },
 
-  async getTop10Media(limit) {
-    return mediaRepository.findTop10(limit);
+  async getTop10(query) {
+    const items = await mediaRepository.findTop10(query);
+    return items.map(toMediaListDto);
   },
 
-  async getUpcomingMedia(limit) {
-    return mediaRepository.findUpcoming(limit);
+  async getTopImdb(query) {
+    const items = await mediaRepository.findTopImdb(query);
+    return items.map(toMediaListDto);
   },
 
-  async getTopImdbMedia(limit) {
-    return mediaRepository.findTopImdb(limit);
+  async getUpcoming(query) {
+    const items = await mediaRepository.findUpcoming(query);
+    return items.map(toMediaListDto);
   },
 
-  async getAnimations(limit = 20) {
-    return mediaRepository.findByCustomFilter(
-      {
-        genres: { $in: ["Animation", "انیمیشن"] },
-      },
-      {
-        limit,
-        sort: { releaseYear: -1, createdAt: -1 },
-      },
-    );
+  async getAnimations(query) {
+    const items = await mediaRepository.findAnimations(query);
+    return items.map(toMediaListDto);
   },
 
-  async getPersianDubbed(limit = 20) {
-    return mediaRepository.findByCustomFilter(
-      {
-        languages: { $in: ["Persian", "فارسی", "دوبله فارسی"] },
-      },
-      {
-        limit,
-        sort: { releaseYear: -1, createdAt: -1 },
-      },
-    );
+  async getPersianDubbed(query) {
+    const items = await mediaRepository.findPersianDubbed(query);
+    return items.map(toMediaListDto);
   },
 };
