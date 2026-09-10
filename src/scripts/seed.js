@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import { env } from "./../config/env.js";
-import { env } from "./../config/env.js";
 import { Media } from "./../modules/media/models/Media.js";
 import { Person } from "./../modules/people/models/Person.js";
 import { rawPeople } from "./rawPeople.js";

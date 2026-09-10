@@ -8,7 +8,7 @@ export const rawMedia = [
       fa: "تلقین",
     },
     originalTitle: "Inception",
-    synopsis: {
+    summary: {
       en: "A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea.",
       fa: "یک دزد حرفه‌ای که با ورود به رویاهای دیگران اسرار شرکتی را می‌دزدد، ماموریتی برعکس برای کاشت یک ایده دریافت می‌کند.",
     },
@@ -71,7 +71,7 @@ export const rawMedia = [
       fa: "اوپنهایمر",
     },
     originalTitle: "Oppenheimer",
-    synopsis: {
+    summary: {
       en: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.",
       fa: "داستان دانشمند آمریکایی رابرت اوپنهایمر و نقش کلیدی او در پروژه ساخت اولین بمب اتمی.",
     },
@@ -126,7 +126,7 @@ export const rawMedia = [
       fa: "شهر اشباح",
     },
     originalTitle: "Sen to Chihiro no Kamikakushi",
-    synopsis: {
+    summary: {
       en: "During her family's move to the suburbs, a 10-year-old girl wanders into a world ruled by gods, witches, and spirits.",
       fa: "دختربچه‌ای ۱۰ ساله در مسیر نقل مکان خانواده‌اش وارد دنیایی شگفت‌انگیز و جادویی از ارواح و خدایان می‌شود.",
     },
@@ -172,7 +172,7 @@ export const rawMedia = [
       fa: "تلماسه: بخش سوم",
     },
     originalTitle: "Dune: Part Three",
-    synopsis: {
+    summary: {
       en: "The continuation of Paul Atreides' mythical journey as Emperor of the Known Universe.",
       fa: "ادامه‌ی سفر اسطوره‌ای پال اتریدیز در قامت امپراتور جهان شناخته‌شده و تبعات رهبری مذهبی او.",
     },

@@ -1,0 +1,55 @@
+export const MEDIA_LIST_PROJECTION = {
+  _id: 0,
+  id: 1,
+  slug: 1,
+  type: 1,
+  title: 1,
+  originalTitle: 1,
+  releaseYear: 1,
+  ageRating: 1,
+  runtime: 1,
+  genres: 1,
+  countries: 1,
+  languages: 1,
+  poster: 1,
+  rating: 1,
+  isTop10: 1,
+  isUpcoming: 1,
+  isExclusive: 1,
+};
+
+export const MEDIA_DETAILS_PROJECTION = {
+  _id: 1,
+  id: 1,
+  slug: 1,
+  type: 1,
+  title: 1,
+  originalTitle: 1,
+  summary: 1,
+  storyline: 1,
+  releaseYear: 1,
+  ageRating: 1,
+  runtime: 1,
+  genres: 1,
+  countries: 1,
+  languages: 1,
+  poster: 1,
+  rating: 1,
+  credits: 1,
+  isTop10: 1,
+  isUpcoming: 1,
+  isExclusive: 1,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
+export const PERSON_SUMMARY_PROJECTION = {
+  _id: 1,
+  id: 1,
+  slug: 1,
+  name: 1,
+  avatar: 1,
+};
+
+export const mediaListProjection = MEDIA_LIST_PROJECTION;
+export const mediaDetailsProjection = MEDIA_DETAILS_PROJECTION;
