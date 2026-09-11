@@ -9,21 +9,6 @@ const posterSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const assetsSchema = new mongoose.Schema(
-  {
-    poster: { type: posterSchema, required: true },
-    gallery: {
-      type: [{ type: String, trim: true }],
-      default: [],
-    },
-    trailers: {
-      type: [trailerSchema],
-      default: [],
-    },
-  },
-  { _id: false },
-);
-
 const trailerSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
@@ -41,6 +26,21 @@ const trailerSchema = new mongoose.Schema(
       enum: ["360p", "480p", "720p", "1080p", "1440p", "2160p"],
       default: "1080p",
       trim: true,
+    },
+  },
+  { _id: false },
+);
+
+const assetsSchema = new mongoose.Schema(
+  {
+    poster: { type: posterSchema, required: true },
+    gallery: {
+      type: [{ type: String, trim: true }],
+      default: [],
+    },
+    trailers: {
+      type: [trailerSchema],
+      default: [],
     },
   },
   { _id: false },
@@ -99,12 +99,17 @@ const mediaSchema = new mongoose.Schema(
       fa: { type: String, required: true, trim: true },
       en: { type: String, default: "", trim: true },
     },
+
     releaseYear: {
       type: Number,
       required: true,
       min: 1888,
-      max: new Date().getFullYear() + 20,
+      validate: {
+        validator: (value) => value <= new Date().getFullYear() + 20,
+        message: "releaseYear is too far in the future",
+      },
     },
+
     ageRating: {
       type: String,
       enum: [
@@ -122,36 +127,26 @@ const mediaSchema = new mongoose.Schema(
         "TV-MA",
         "TV-14",
         "TV-PG",
-        null,
       ],
       default: null,
     },
+
     runtime: {
       type: Number,
       min: 0,
       default: null,
     },
+
     genres: [{ type: String, trim: true }],
     countries: [{ type: String, trim: true }],
     languages: [{ type: String, trim: true }],
     tags: [{ type: String, trim: true }],
+
     assets: {
       type: assetsSchema,
       required: true,
-      poster: {
-        vertical: { type: String, required: true, trim: true },
-        horizontal: { type: String, default: "", trim: true },
-        backdrop: { type: String, default: "", trim: true },
-      },
-      gallery: {
-        type: [{ type: String, trim: true }],
-        default: [],
-      },
-      trailers: {
-        type: [trailerSchema],
-        default: [],
-      },
     },
+
     rating: {
       imdb: {
         type: Number,
@@ -159,13 +154,14 @@ const mediaSchema = new mongoose.Schema(
         max: 10,
         default: null,
         validate: {
-          validator: (value) => value == null || Number.isInteger(value * 10),
+          validator: (value) =>
+            value == null || /^\d+(\.\d)?$/.test(String(value)),
           message: "IMDb rating must have at most one decimal place",
         },
       },
       rottenTomatoes: { type: Number, min: 0, max: 100, default: null },
       metacritic: { type: Number, min: 0, max: 100, default: null },
-      userRating: { type: Number, min: 0, max: 5, default: null },
+      userRating: { type: Number, min: 0, max: 5, default: 0 },
       voteCount: {
         type: Number,
         min: 0,
@@ -176,6 +172,7 @@ const mediaSchema = new mongoose.Schema(
         },
       },
     },
+
     credits: {
       directors: [
         {
@@ -191,6 +188,7 @@ const mediaSchema = new mongoose.Schema(
       ],
       cast: [castSchema],
     },
+
     isTop10: {
       type: Boolean,
       default: false,
@@ -230,10 +228,16 @@ mediaSchema.index({ type: 1, releaseYear: -1 });
 mediaSchema.index({ genres: 1 });
 mediaSchema.index({ languages: 1 });
 mediaSchema.index({ tags: 1 });
+
+mediaSchema.index({ "credits.directors": 1 });
+mediaSchema.index({ "credits.writers": 1 });
+mediaSchema.index({ "credits.cast.person": 1 });
+
 mediaSchema.index(
-  { "rating.imdb": -1 },
+  { "rating.imdb": -1, createdAt: -1 },
   { partialFilterExpression: { isTop10: true } },
 );
-aSchema.index({ isUpcoming: 1, releaseYear: 1 });
+
+mediaSchema.index({ isUpcoming: 1, releaseYear: 1 });
 
 export const Media = mongoose.model("Media", mediaSchema);
