@@ -5,7 +5,7 @@ export const toMediaListDto = (doc) => ({
   title: doc.title,
   originalTitle: doc.originalTitle,
   releaseYear: doc.releaseYear,
-  runtime: doc.runtime,
+  duration: doc.duration,
   genres: doc.genres || [],
   countries: doc.countries || [],
   languages: doc.languages || [],

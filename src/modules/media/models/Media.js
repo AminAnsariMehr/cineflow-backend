@@ -70,6 +70,20 @@ const castSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const seriesDetailsSchema = new mongoose.Schema(
+  {
+    seasonsCount: { type: Number, min: 0, default: 0 },
+    totalEpisodes: { type: Number, min: 0, default: 0 },
+    episodeDuration: { type: Number, min: 0, default: null },
+    status: {
+      type: String,
+      enum: ["ongoing", "completed", "renewed", "canceled"],
+      default: "ongoing",
+    },
+  },
+  { _id: false },
+);
+
 const mediaSchema = new mongoose.Schema(
   {
     id: {
@@ -88,13 +102,15 @@ const mediaSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["movie", "series", "anime", "documentary"],
+      enum: ["movie", "series"],
     },
     title: {
       fa: { type: String, required: true, trim: true },
       en: { type: String, required: true, trim: true },
     },
+
     originalTitle: { type: String, trim: true },
+
     summary: {
       fa: { type: String, required: true, trim: true },
       en: { type: String, default: "", trim: true },
@@ -129,9 +145,18 @@ const mediaSchema = new mongoose.Schema(
         "TV-PG",
       ],
       default: null,
+      validate: {
+        validator: function (value) {
+          if (this.type === "movie" && (value == null || value <= 0)) {
+            return false;
+          }
+          return true;
+        },
+        message: "Duration is required for movies and must be greater than 0",
+      },
     },
 
-    runtime: {
+    duration: {
       type: Number,
       min: 0,
       default: null,
@@ -189,6 +214,20 @@ const mediaSchema = new mongoose.Schema(
       cast: [castSchema],
     },
 
+    seriesDetails: {
+      type: seriesDetailsSchema,
+      default: null,
+
+      validate: {
+        validator: function (value) {
+          if (this.type === "series" && !value) return false;
+
+          return true;
+        },
+        message: "seriesDetails is required for series type.",
+      },
+    },
+
     isTop10: {
       type: Boolean,
       default: false,
@@ -205,6 +244,7 @@ const mediaSchema = new mongoose.Schema(
   {
     timestamps: true,
     suppressReservedKeysWarning: true,
+
     toJSON: {
       virtuals: true,
       transform: (_, ret) => {
@@ -213,11 +253,14 @@ const mediaSchema = new mongoose.Schema(
         return ret;
       },
     },
+
     toObject: {
       virtuals: true,
       transform: (_, ret) => {
         delete ret._id;
         delete ret.__v;
+        if (ret.type === "movie") delete ret.seriesDetails;
+        if (ret.type === "series") delete ret.duration;
         return ret;
       },
     },

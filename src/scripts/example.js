@@ -9,7 +9,7 @@
     },
     originalTitle: "Inception",
     releaseYear: 2010,
-    runtime: 148,
+    duration: 148,
     genres: ["Action", "Sci-Fi", "Adventure"],
     countries: ["United States", "United Kingdom"],
     languages: ["en", "it"],
