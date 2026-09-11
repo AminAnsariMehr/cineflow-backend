@@ -26,7 +26,6 @@ export const MEDIA_DETAILS_PROJECTION = {
   title: 1,
   originalTitle: 1,
   summary: 1,
-  storyline: 1,
   releaseYear: 1,
   ageRating: 1,
   runtime: 1,
