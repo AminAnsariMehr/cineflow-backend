@@ -145,6 +145,12 @@ const mediaSchema = new mongoose.Schema(
         "TV-PG",
       ],
       default: null,
+    },
+
+    duration: {
+      type: Number,
+      min: 0,
+      default: null,
       validate: {
         validator: function (value) {
           if (this.type === "movie" && (value == null || value <= 0)) {
@@ -156,21 +162,36 @@ const mediaSchema = new mongoose.Schema(
       },
     },
 
-    duration: {
-      type: Number,
-      min: 0,
-      default: null,
-    },
-
-    genres: [{ type: String, trim: true }],
+    genres: [
+      {
+        type: String,
+        trim: true,
+        enum: [
+          "Action",
+          "Adventure",
+          "Animation",
+          "Biography",
+          "Comedy",
+          "Crime",
+          "Drama",
+          "Fantasy",
+          "Film Noir",
+          "History",
+          "Horror",
+          "Mystery",
+          "Musical",
+          "Romance",
+          "Superhero",
+          "Thriller",
+          "Sci-Fi",
+          "War",
+          "Western",
+        ],
+      },
+    ],
     countries: [{ type: String, trim: true }],
     languages: [{ type: String, trim: true }],
-    tags: [{ type: String, trim: true }],
-
-    assets: {
-      type: assetsSchema,
-      required: true,
-    },
+    assets: { type: assetsSchema, required: true },
 
     rating: {
       imdb: {
@@ -228,6 +249,31 @@ const mediaSchema = new mongoose.Schema(
       },
     },
 
+    collectionInfo: {
+      collection: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Collection",
+        default: null,
+      },
+      order: {
+        type: Number,
+        min: 1,
+        default: null,
+        validate: {
+          validator: function (value) {
+            if (
+              this.collectionInfo?.collection &&
+              (value == null || value < 1)
+            ) {
+              return false;
+            }
+            return true;
+          },
+          message: "Order is required when a collection is assigned",
+        },
+      },
+    },
+
     isTop10: {
       type: Boolean,
       default: false,
@@ -250,6 +296,8 @@ const mediaSchema = new mongoose.Schema(
       transform: (_, ret) => {
         delete ret._id;
         delete ret.__v;
+        if (ret.type === "movie") delete ret.seriesDetails;
+        if (ret.type === "series") delete ret.duration;
         return ret;
       },
     },
@@ -270,7 +318,6 @@ const mediaSchema = new mongoose.Schema(
 mediaSchema.index({ type: 1, releaseYear: -1 });
 mediaSchema.index({ genres: 1 });
 mediaSchema.index({ languages: 1 });
-mediaSchema.index({ tags: 1 });
 
 mediaSchema.index({ "credits.directors": 1 });
 mediaSchema.index({ "credits.writers": 1 });
@@ -282,5 +329,9 @@ mediaSchema.index(
 );
 
 mediaSchema.index({ isUpcoming: 1, releaseYear: 1 });
+mediaSchema.index({
+  "collectionInfo.collection": 1,
+  "collectionInfo.order": 1,
+});
 
 export const Media = mongoose.model("Media", mediaSchema);

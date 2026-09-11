@@ -4,6 +4,7 @@ import {
   MEDIA_LIST_PROJECTION,
   MEDIA_DETAILS_PROJECTION,
   PERSON_SUMMARY_PROJECTION,
+  COLLECTION_TIMELINE_PROJECTION,
 } from "./media.projections.js";
 
 export const mediaRepository = {
@@ -25,6 +26,14 @@ export const mediaRepository = {
       .populate("credits.cast.person", PERSON_SUMMARY_PROJECTION)
       .populate("credits.directors", PERSON_SUMMARY_PROJECTION)
       .populate("credits.writers", PERSON_SUMMARY_PROJECTION)
+      .populate("collectionInfo.collection")
+      .lean();
+  },
+
+  async findCollectionTimeline(collectionId) {
+    return Media.find({ "collectionInfo.collection": collectionId })
+      .select(COLLECTION_TIMELINE_PROJECTION)
+      .sort({ "collectionInfo.order": 1 })
       .lean();
   },
 
@@ -53,7 +62,7 @@ export const mediaRepository = {
   },
 
   async findAnimations({ limit } = {}) {
-    return Media.find({ genres: { $in: ["Animation", "انیمیشن"] } })
+    return Media.find({ genres: "Animation" })
       .select(MEDIA_LIST_PROJECTION)
       .sort({ createdAt: -1 })
       .limit(normalizeLimit(limit))

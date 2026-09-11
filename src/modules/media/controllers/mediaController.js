@@ -63,4 +63,31 @@ export const mediaController = {
       next(error);
     }
   },
+
+  // async getMediaBySlug(req, res) {
+  //   const { slug } = req.params;
+
+  //   const media = await Media.findOne({ slug })
+  //     .populate("credits.directors credits.writers credits.cast.person")
+  //     .populate("collectionInfo.collection");
+
+  //   if (!media) return res.status(404).json({ message: "Media not found" });
+
+  //   let collectionTimeline = [];
+
+  //   if (media.collectionInfo?.collection) {
+  //     collectionTimeline = await Media.find({
+  //       "collectionInfo.collection": media.collectionInfo.collection._id,
+  //     })
+  //       .select(
+  //         "id slug title releaseYear assets.poster collectionInfo.order type",
+  //       )
+  //       .sort({ "collectionInfo.order": 1 });
+  //   }
+
+  //   res.json({
+  //     ...media.toJSON(),
+  //     collectionTimeline,
+  //   });
+  // },
 };

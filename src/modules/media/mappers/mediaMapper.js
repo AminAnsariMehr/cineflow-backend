@@ -5,20 +5,27 @@ export const toMediaListDto = (doc) => ({
   title: doc.title,
   originalTitle: doc.originalTitle,
   releaseYear: doc.releaseYear,
-  duration: doc.duration,
+  ageRating: doc.ageRating || null,
+  duration: doc.type === "movie" ? doc.duration : null,
   genres: doc.genres || [],
   countries: doc.countries || [],
   languages: doc.languages || [],
-  poster: doc.poster,
+  assets: doc.assets,
+  poster: doc.assets?.poster || doc.poster || null,
   rating: doc.rating,
+  seriesDetails: doc.type === "series" ? doc.seriesDetails : undefined,
   isTop10: Boolean(doc.isTop10),
   isUpcoming: Boolean(doc.isUpcoming),
 });
 
 export const toMediaDetailsDto = (doc) => {
   const { _id, __v, ...rest } = doc;
+
   return {
     ...rest,
+    duration: doc.type === "movie" ? doc.duration : undefined,
+    seriesDetails: doc.type === "series" ? doc.seriesDetails : undefined,
+    // poster: doc.assets?.poster || doc.poster || null,
     credits: {
       cast: (doc.credits?.cast || []).map((c) => ({
         character: c.character,
@@ -32,12 +39,14 @@ export const toMediaDetailsDto = (doc) => {
             }
           : null,
       })),
+
       directors: (doc.credits?.directors || []).map((d) => ({
         id: d.id,
         slug: d.slug,
         name: d.name,
         avatar: d.avatar,
       })),
+
       writers: (doc.credits?.writers || []).map((w) => ({
         id: w.id,
         slug: w.slug,
@@ -45,5 +54,6 @@ export const toMediaDetailsDto = (doc) => {
         avatar: w.avatar,
       })),
     },
+    collectionTimeline,
   };
 };

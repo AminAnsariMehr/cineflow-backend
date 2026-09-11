@@ -13,7 +13,15 @@ export const mediaService = {
     if (!item) {
       throw new NotFoundError(`Media with slug '${slug}' not found`);
     }
-    return toMediaDetailsDto(item);
+
+    let collectionTimeline = [];
+    if (item.collectionInfo?.collection?._id) {
+      collectionTimeline = await mediaRepository.findCollectionTimeline(
+        item.collectionInfo.collection._id,
+      );
+    }
+
+    return toMediaDetailsDto(item, collectionTimeline);
   },
 
   async getTop10(query) {
