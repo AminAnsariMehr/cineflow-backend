@@ -12,7 +12,7 @@
     "start": "node src/server.js",
     "ai": "node ai-review-bundle.cjs",
     "ch": "git diff > changes.txt",
-    "seed": "node --env-file=.env src/scripts/seed.js",
+    "seed": "node src/scripts/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

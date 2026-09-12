@@ -22,31 +22,54 @@ const allowedOrigins =
     ? "*"
     : env.corsOrigin
         .split(",")
-        .map((item) => item.trim())
+        .map((origin) => origin.trim())
         .filter(Boolean);
 
-app.use(helmet());
-app.use(express.json());
-app.use(morgan("dev"));
+app.disable("x-powered-by");
 
 app.use(
-  cors({
-    origin(origin, callback) {
-      if (allowedOrigins === "*") {
-        return callback(null, true);
-      }
-
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
     },
   }),
 );
 
+app.use(
+  express.json({
+    limit: "1mb",
+    strict: true,
+  }),
+);
+
+app.use(
+  express.urlencoded({
+    extended: false,
+    limit: "1mb",
+  }),
+);
+
+app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins === "*" || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+    optionsSuccessStatus: 204,
+  }),
+);
+
 app.get("/health", (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: "Server is healthy",
   });

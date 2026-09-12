@@ -1,55 +1,134 @@
 import { mediaRepository } from "../repositories/mediaRepository.js";
-import { NotFoundError } from "../../../shared/errors/AppError.js";
+import {
+  NotFoundError,
+  BadRequestError,
+} from "../../../shared/errors/AppError.js";
 import { toMediaListDto, toMediaDetailsDto } from "../mappers/mediaMapper.js";
+import { toFilmographyItemDto } from "../../people/mappers/peopleMapper.js";
+
+// const normalizeSlug = (slug) => {
+//   if (typeof slug !== "string") return "";
+//   try {
+//     return decodeURIComponent(slug).trim().toLowerCase();
+//   } catch {
+//     return slug.trim().toLowerCase();
+//   }
+// };
+
+const normalizeSlug = (slug) => {
+  if (typeof slug !== "string") {
+    return "";
+  }
+
+  let decodedSlug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    throw new BadRequestError("Media slug contains invalid URL encoding");
+  }
+
+  return decodedSlug.trim().toLowerCase();
+};
+
+const normalizeQuery = (query) => {
+  return query && typeof query === "object" && !Array.isArray(query)
+    ? query
+    : {};
+};
+
+const safeMap = (items, mapper) => {
+  if (!Array.isArray(items)) return [];
+  return items.map(mapper).filter(Boolean);
+};
+
+const extractId = (value) => {
+  if (value == null) return null;
+
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value.toHexString === "function"
+  ) {
+    return value;
+  }
+
+  if (typeof value === "object") {
+    return value._id ?? value.id ?? null;
+  }
+
+  return null;
+};
 
 export const mediaService = {
-  async getAllMedia(query) {
-    const items = await mediaRepository.findAll(query);
-    return items.map(toMediaListDto);
+  async getAllMedia(query = {}) {
+    const items = await mediaRepository.findAll(normalizeQuery(query));
+    return safeMap(items, toMediaListDto);
   },
 
   async getMediaBySlug(slug) {
-    const item = await mediaRepository.findBySlug(slug);
-    if (!item) {
-      throw new NotFoundError(`Media with slug '${slug}' not found`);
-    }
+    const normalizedSlug = normalizeSlug(slug);
 
-    let collectionTimeline = [];
-    if (item.collectionInfo?.collection?._id) {
-      collectionTimeline = await mediaRepository.findCollectionTimeline(
-        item.collectionInfo.collection._id,
+    if (!normalizedSlug) {
+      throw new BadRequestError(
+        "Media slug is required and must be a valid string",
       );
     }
+
+    const item = await mediaRepository.findBySlug(normalizedSlug);
+
+    if (!item) {
+      throw new NotFoundError(`Media with slug '${normalizedSlug}' not found`);
+    }
+
+    const rawCollection = item.collectionInfo?.collection;
+    const collectionId = extractId(rawCollection);
+
+    const collectionTimeline = collectionId
+      ? await mediaRepository.findCollectionTimeline(collectionId)
+      : [];
 
     return toMediaDetailsDto(item, collectionTimeline);
   },
 
-  async getTop10(query) {
-    const items = await mediaRepository.findTop10(query);
-    return items.map(toMediaListDto);
+  async getTop10(query = {}) {
+    const items = await mediaRepository.findTop10(normalizeQuery(query));
+    return safeMap(items, toMediaListDto);
   },
 
-  async getTopImdb(query) {
-    const items = await mediaRepository.findTopImdb(query);
-    return items.map(toMediaListDto);
+  async getTopImdb(query = {}) {
+    const items = await mediaRepository.findTopImdb(normalizeQuery(query));
+    return safeMap(items, toMediaListDto);
   },
 
-  async getUpcoming(query) {
-    const items = await mediaRepository.findUpcoming(query);
-    return items.map(toMediaListDto);
+  async getUpcoming(query = {}) {
+    const items = await mediaRepository.findUpcoming(normalizeQuery(query));
+    return safeMap(items, toMediaListDto);
   },
 
-  async getAnimations(query) {
-    const items = await mediaRepository.findAnimations(query);
-    return items.map(toMediaListDto);
+  async getAnimations(query = {}) {
+    const items = await mediaRepository.findAnimations(normalizeQuery(query));
+    return safeMap(items, toMediaListDto);
   },
 
-  async getPersianDubbed(query) {
-    const items = await mediaRepository.findPersianDubbed(query);
-    return items.map(toMediaListDto);
+  async getPersianDubbed(query = {}) {
+    const items = await mediaRepository.findPersianDubbed(
+      normalizeQuery(query),
+    );
+    return safeMap(items, toMediaListDto);
   },
 
-  async getFilmographyByPersonId(personObjectId) {
-    return mediaRepository.findFilmographyByPersonId(personObjectId);
+  async getFilmographyByPersonId(personObjectId, query = {}) {
+    if (!personObjectId) {
+      return [];
+    }
+
+    const items = await mediaRepository.findFilmographyByPersonId(
+      personObjectId,
+      query,
+    );
+
+    return safeMap(items, (media) =>
+      toFilmographyItemDto(media, personObjectId),
+    );
   },
 };
