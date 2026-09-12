@@ -48,4 +48,8 @@ export const mediaService = {
     const items = await mediaRepository.findPersianDubbed(query);
     return items.map(toMediaListDto);
   },
+
+  async getFilmographyByPersonId(personObjectId) {
+    return mediaRepository.findFilmographyByPersonId(personObjectId);
+  },
 };

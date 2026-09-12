@@ -10,8 +10,11 @@ import {
 export const mediaRepository = {
   async findAll({ type, genre, limit } = {}) {
     const filter = {};
-    if (type) filter.type = type;
-    if (genre) filter.genres = genre;
+    // if (type) filter.type = type;
+    // if (genre) filter.genres = genre;
+
+    if (typeof type === "string") filter.type = type;
+    if (typeof genre === "string") filter.genres = genre;
 
     return Media.find(filter)
       .select(MEDIA_LIST_PROJECTION)

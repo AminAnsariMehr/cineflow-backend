@@ -30,7 +30,8 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
     title: mediaDoc.title,
     originalTitle: mediaDoc.originalTitle,
     releaseYear: mediaDoc.releaseYear,
-    poster: mediaDoc.poster,
+    poster:
+      mediaDoc.assets?.poster?.vertical || mediaDoc.assets?.poster || null,
     rating: mediaDoc.rating,
     asCast: matchedCast ? { character: matchedCast.character } : null,
     asDirector: Boolean(isDirector),

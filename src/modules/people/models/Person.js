@@ -27,14 +27,22 @@ const personSchema = new mongoose.Schema(
     birthDate: {
       type: String,
       default: null,
-    },
-    birthPlace: {
-      fa: { type: String, default: "", trim: true },
-      en: { type: String, default: "", trim: true },
+      validate: {
+        validator: (v) => v == null || /^\d{4}-\d{2}-\d{2}$/.test(v),
+        message: "Date must be in YYYY-MM-DD format",
+      },
     },
     deathDate: {
       type: String,
       default: null,
+      validate: {
+        validator: (v) => v == null || /^\d{4}-\d{2}-\d{2}$/.test(v),
+        message: "Date must be in YYYY-MM-DD format",
+      },
+    },
+    birthPlace: {
+      fa: { type: String, default: "", trim: true },
+      en: { type: String, default: "", trim: true },
     },
     avatar: {
       type: String,

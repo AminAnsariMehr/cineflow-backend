@@ -315,19 +315,26 @@ const mediaSchema = new mongoose.Schema(
   },
 );
 
-mediaSchema.index({ type: 1, releaseYear: -1 });
-mediaSchema.index({ genres: 1 });
-mediaSchema.index({ languages: 1 });
+// فیلترها و مرتب‌سازی‌های ترکیبی
+mediaSchema.index({ type: 1, createdAt: -1 });
+mediaSchema.index({ genres: 1, createdAt: -1 });
+mediaSchema.index({ languages: 1, createdAt: -1 });
 
+// ایندکس‌های مربوط به رفرنس‌های People
 mediaSchema.index({ "credits.directors": 1 });
 mediaSchema.index({ "credits.writers": 1 });
 mediaSchema.index({ "credits.cast.person": 1 });
 
+// ایندکس پارشیال پرسرعت و بهینه برای بخش Top 10
 mediaSchema.index(
   { "rating.imdb": -1, createdAt: -1 },
   { partialFilterExpression: { isTop10: true } },
 );
 
+// ایندکس جهت برطرف کردن Full Scan در متد findTopImdb
+mediaSchema.index({ "rating.imdb": -1, "rating.voteCount": -1 });
+
+// کالکشن و زمان‌بندی فرنچایزها
 mediaSchema.index({ isUpcoming: 1, releaseYear: 1 });
 mediaSchema.index({
   "collectionInfo.collection": 1,

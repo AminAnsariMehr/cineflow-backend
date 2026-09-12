@@ -1,6 +1,6 @@
 import { peopleRepository } from "../repositories/peopleRepository.js";
-import { mediaRepository } from "../../media/repositories/mediaRepository.js";
 import { NotFoundError } from "../../../shared/errors/AppError.js";
+import { mediaService } from "../../media/services/mediaService.js";
 import {
   toPersonDetailsDto,
   toFilmographyItemDto,
@@ -18,7 +18,7 @@ export const peopleService = {
       throw new NotFoundError(`Person with slug '${slug}' not found`);
     }
 
-    const rawFilmography = await mediaRepository.findFilmographyByPersonId(
+    const rawFilmography = await mediaService.getFilmographyByPersonId(
       person._id,
     );
 

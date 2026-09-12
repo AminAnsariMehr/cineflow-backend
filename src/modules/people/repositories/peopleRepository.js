@@ -17,8 +17,9 @@ const PERSON_PUBLIC_PROJECTION = {
 export const peopleRepository = {
   async findAll({ profession, limit } = {}) {
     const filter = {};
-    if (profession) {
-      filter.primaryProfessions = profession;
+
+    if (typeof profession === "string" && profession.trim()) {
+      filter.primaryProfessions = profession.trim();
     }
 
     return Person.find(filter)
