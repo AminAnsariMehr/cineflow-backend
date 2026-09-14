@@ -1,7 +1,12 @@
 import mongoose from "mongoose";
-import { env } from "../config/env.js";
+import { env } from "./env.js";
 
-export const connectDB = async () => {
+let connectionPromise = null;
+let listenersRegistered = false;
+
+const registerConnectionListeners = () => {
+  if (listenersRegistered) return;
+
   mongoose.connection.on("connected", () => {
     console.log("MongoDB connected successfully");
   });
@@ -14,7 +19,36 @@ export const connectDB = async () => {
     console.warn("MongoDB disconnected");
   });
 
-  await mongoose.connect(env.mongoUri, {
-    serverSelectionTimeoutMS: 10000,
-  });
+  listenersRegistered = true;
+};
+
+export const connectDB = async () => {
+  registerConnectionListeners();
+
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (!connectionPromise) {
+    connectionPromise = mongoose
+      .connect(env.mongoUri, {
+        serverSelectionTimeoutMS: 10_000,
+        maxPoolSize: 10,
+      })
+      .catch((error) => {
+        connectionPromise = null;
+        throw error;
+      });
+  }
+
+  await connectionPromise;
+  return mongoose.connection;
+};
+
+export const disconnectDB = async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
+
+  connectionPromise = null;
 };

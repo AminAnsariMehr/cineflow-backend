@@ -1,14 +1,13 @@
 // src/modules/people/models/Person.js
 import mongoose from "mongoose";
 
+const cleanPersonTransform = (_, ret) => {
+  delete ret.__v;
+  return ret;
+};
+
 const personSchema = new mongoose.Schema(
   {
-    id: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
     slug: {
       type: String,
       required: true,
@@ -52,22 +51,14 @@ const personSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    suppressReservedKeysWarning: true,
+    id: false,
     toJSON: {
       virtuals: true,
-      transform: (_, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
+      transform: cleanPersonTransform,
     },
     toObject: {
       virtuals: true,
-      transform: (_, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
+      transform: cleanPersonTransform,
     },
   },
 );

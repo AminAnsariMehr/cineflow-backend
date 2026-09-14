@@ -3,7 +3,6 @@ import { normalizeLimit } from "../../../shared/utils/query.util.js";
 
 const PERSON_PUBLIC_PROJECTION = {
   _id: 1,
-  id: 1,
   slug: 1,
   name: 1,
   biography: 1,

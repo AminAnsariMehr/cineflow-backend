@@ -1,6 +1,5 @@
 export const MEDIA_LIST_PROJECTION = {
-  _id: 0,
-  id: 1,
+  _id: 1,
   slug: 1,
   type: 1,
   title: 1,
@@ -30,7 +29,6 @@ export const MEDIA_DETAILS_PROJECTION = {
 
 export const PERSON_SUMMARY_PROJECTION = {
   _id: 1,
-  id: 1,
   slug: 1,
   name: 1,
   avatar: 1,
@@ -38,7 +36,6 @@ export const PERSON_SUMMARY_PROJECTION = {
 
 export const COLLECTION_SUMMARY_PROJECTION = {
   _id: 1,
-  id: 1,
   slug: 1,
   title: 1,
   summary: 1,
@@ -46,8 +43,7 @@ export const COLLECTION_SUMMARY_PROJECTION = {
 };
 
 export const COLLECTION_TIMELINE_PROJECTION = {
-  _id: 0,
-  id: 1,
+  _id: 1,
   slug: 1,
   title: 1,
   releaseYear: 1,

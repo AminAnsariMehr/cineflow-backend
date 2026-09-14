@@ -4,7 +4,7 @@ import { env } from "../config/env.js";
 const isDevelopment = env.nodeEnv === "development";
 
 const getValidationMessage = (error) => {
-  if (!error.errors) {
+  if (!error?.errors) {
     return "Validation failed";
   }
 
@@ -34,17 +34,22 @@ export const notFoundHandler = (req, res, next) => {
 };
 
 export const errorHandler = (err, req, res, next) => {
+  void req;
   void next;
 
   if (env.nodeEnv !== "test") {
     console.error(err);
   }
 
-  let statusCode = Number.isInteger(err.statusCode) ? err.statusCode : 500;
+  let statusCode = Number.isInteger(err?.statusCode) ? err.statusCode : 500;
 
-  let message = err.message || "Internal Server Error";
+  let message = err?.message || "Internal Server Error";
 
-  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+  if (
+    err instanceof SyntaxError &&
+    err.status === 400 &&
+    Object.prototype.hasOwnProperty.call(err, "body")
+  ) {
     statusCode = 400;
     message = "Invalid JSON body";
   }
@@ -80,8 +85,8 @@ export const errorHandler = (err, req, res, next) => {
   };
 
   if (isDevelopment) {
-    response.stack = err.stack;
-    response.errorName = err.name;
+    response.errorName = err?.name || "Error";
+    response.stack = err?.stack;
   }
 
   return res.status(statusCode).json(response);

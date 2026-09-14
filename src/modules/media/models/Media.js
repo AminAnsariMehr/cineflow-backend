@@ -1,5 +1,14 @@
 import mongoose from "mongoose";
 
+const cleanMediaTransform = (_, ret) => {
+  delete ret.__v;
+
+  if (ret.type === "movie") delete ret.seriesDetails;
+  if (ret.type === "series") delete ret.duration;
+
+  return ret;
+};
+
 const posterSchema = new mongoose.Schema(
   {
     vertical: { type: String, required: true, trim: true },
@@ -86,12 +95,6 @@ const seriesDetailsSchema = new mongoose.Schema(
 
 const mediaSchema = new mongoose.Schema(
   {
-    id: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
     slug: {
       type: String,
       required: true,
@@ -289,28 +292,15 @@ const mediaSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    suppressReservedKeysWarning: true,
-
+    id: false,
     toJSON: {
       virtuals: true,
-      transform: (_, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        if (ret.type === "movie") delete ret.seriesDetails;
-        if (ret.type === "series") delete ret.duration;
-        return ret;
-      },
+      transform: cleanMediaTransform,
     },
 
     toObject: {
       virtuals: true,
-      transform: (_, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        if (ret.type === "movie") delete ret.seriesDetails;
-        if (ret.type === "series") delete ret.duration;
-        return ret;
-      },
+      transform: cleanMediaTransform,
     },
   },
 );

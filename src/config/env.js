@@ -3,18 +3,12 @@ import "dotenv/config";
 const requiredEnvVars = ["MONGODB_URI"];
 
 for (const key of requiredEnvVars) {
-  // if (!process.env[key]) {
-  //   throw new Error(`Missing required environment variable: ${key}`);
-  // }
-
   const value = process.env[key]?.trim();
 
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
   }
 }
-
-// const parsedPort = Number(process.env.PORT);
 
 const rawPort = process.env.PORT?.trim();
 const parsedPort = rawPort === undefined ? 5000 : Number(rawPort);
@@ -35,23 +29,18 @@ if (!supportedEnvironments.includes(nodeEnv)) {
 
 const corsOrigin = process.env.CORS_ORIGIN?.trim() || "*";
 
-// export const env = {
-//   port:
-//     process.env.PORT === undefined
-//       ? 5000
-//       : Number.isInteger(parsedPort) && parsedPort > 0
-//         ? parsedPort
-//         : (() => {
-//             throw new Error("PORT must be a positive integer");
-//           })(),
-//   mongoUri: process.env.MONGODB_URI,
-//   corsOrigin: process.env.CORS_ORIGIN || "*",
-//   nodeEnv: process.env.NODE_ENV || "development",
-// };
+const allowedOrigins =
+  corsOrigin === "*"
+    ? "*"
+    : corsOrigin
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean);
 
 export const env = Object.freeze({
   port: parsedPort,
   mongoUri: process.env.MONGODB_URI.trim(),
   corsOrigin,
+  allowedOrigins,
   nodeEnv,
 });

@@ -17,14 +17,6 @@ import { peopleModule } from "./modules/people/people.module.js";
 
 const app = express();
 
-const allowedOrigins =
-  env.corsOrigin === "*"
-    ? "*"
-    : env.corsOrigin
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter(Boolean);
-
 app.disable("x-powered-by");
 
 app.use(
@@ -58,7 +50,7 @@ app.use(
         return callback(null, true);
       }
 
-      if (allowedOrigins === "*" || allowedOrigins.includes(origin)) {
+      if (env.allowedOrigins === "*" || env.allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
