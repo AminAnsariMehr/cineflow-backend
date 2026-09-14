@@ -10,10 +10,7 @@ if "%ROOT_DIR:~-1%"=="\" set "ROOT_DIR=%ROOT_DIR:~0,-1%"
 
 set "OUT_FILE=%ROOT_DIR%\src_structure.txt"
 
-rem پوشه‌هایی که باید نادیده گرفته شوند
 set "EXCLUDE_DIRS=node_modules .git dist .vscode .storybook .husky"
-
-rem فقط این پسوندها ذخیره شوند
 set "INCLUDE_EXTENSIONS=.css .scss .vue .js .ts .jsx .tsx "
 
 rem =========================

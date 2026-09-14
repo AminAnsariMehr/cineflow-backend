@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
 
+const cleanCollectionTransform = (_, ret) => {
+  delete ret.__v;
+  return ret;
+};
+
 const collectionSchema = new mongoose.Schema(
   {
     slug: {
@@ -24,13 +29,14 @@ const collectionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    id: false,
     toJSON: {
       virtuals: true,
-      transform: (_, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
+      transform: cleanCollectionTransform,
+    },
+    toObject: {
+      virtuals: true,
+      transform: cleanCollectionTransform,
     },
   },
 );

@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "checkJs": false,
+    "paths": {
+      "#config/*": ["./src/config/*"],
+      "#middlewares/*": ["./src/middlewares/*"],
+      "#modules/*": ["./src/modules/*"],
+      "#shared/*": ["./src/shared/*"]
+    }
+  },
+  "include": ["src/**/*.js"]
+}

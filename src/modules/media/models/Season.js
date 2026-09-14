@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
 
+const cleanSeasonTransform = (_, ret) => {
+  delete ret.__v;
+  return ret;
+};
+
 const episodeSchema = new mongoose.Schema(
   {
     episodeNumber: {
@@ -81,16 +86,16 @@ const seasonSchema = new mongoose.Schema(
       },
     },
   },
-
   {
     timestamps: true,
+    id: false,
     toJSON: {
       virtuals: true,
-      transform: (_, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
+      transform: cleanSeasonTransform,
+    },
+    toObject: {
+      virtuals: true,
+      transform: cleanSeasonTransform,
     },
   },
 );

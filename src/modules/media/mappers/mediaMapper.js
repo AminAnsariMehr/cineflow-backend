@@ -1,19 +1,4 @@
-// src/modules/media/mappers/mediaMapper.js
-
-const toPlainObject = (doc) => {
-  if (!doc || typeof doc !== "object") return null;
-  return typeof doc.toObject === "function" ? doc.toObject() : doc;
-};
-
-// استخراج و تبدیل ایمن Mongo ObjectId یا شناسه به رشته
-const getEntityId = (entity) => {
-  if (!entity || typeof entity !== "object") return null;
-  const rawId = entity.id ?? entity._id;
-  if (rawId == null) return null;
-  return typeof rawId.toString === "function"
-    ? rawId.toString()
-    : String(rawId);
-};
+import { getEntityId, toPlainObject } from "#shared/mongoose/entityId";
 
 const getPosterUrl = (assets) =>
   assets?.poster?.vertical ?? assets?.poster?.horizontal ?? null;
@@ -89,7 +74,6 @@ export const toMediaDetailsDto = (mediaDoc, options = {}) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
 
-  // مپینگ روابط تو در تو به DTOهای استاندارد
   const cast = Array.isArray(media.credits?.cast)
     ? media.credits.cast
         .map((item) => {

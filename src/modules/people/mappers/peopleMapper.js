@@ -1,51 +1,60 @@
-export const toPersonDetailsDto = (personDoc) => ({
-  id: personDoc.id ?? personDoc._id?.toString?.() ?? null,
-  slug: personDoc.slug,
-  name: personDoc.name,
-  biography: personDoc.biography ?? {
-    fa: "",
-    en: "",
-  },
-  birthDate: personDoc.birthDate ?? null,
-  deathDate: personDoc.deathDate ?? null,
-  birthPlace: personDoc.birthPlace ?? {
-    fa: "",
-    en: "",
-  },
-  avatar: personDoc.avatar ?? "",
-  primaryProfessions: Array.isArray(personDoc.primaryProfessions)
-    ? personDoc.primaryProfessions
-    : [],
-});
+import { getEntityId, toPlainObject } from "#shared/mongoose/entityId";
+
+export const toPersonDetailsDto = (personDoc) => {
+  const person = toPlainObject(personDoc);
+  if (!person) return null;
+
+  return {
+    id: getEntityId(person),
+    slug: person.slug,
+    name: person.name,
+    biography: person.biography ?? {
+      fa: "",
+      en: "",
+    },
+    birthDate: person.birthDate ?? null,
+    deathDate: person.deathDate ?? null,
+    birthPlace: person.birthPlace ?? {
+      fa: "",
+      en: "",
+    },
+    avatar: person.avatar ?? "",
+    primaryProfessions: Array.isArray(person.primaryProfessions)
+      ? person.primaryProfessions
+      : [],
+  };
+};
 
 export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
+  const media = toPlainObject(mediaDoc);
+  if (!media) return null;
+
   const targetId = String(personObjectId);
 
-  const matchedCast = mediaDoc.credits?.cast?.find((castMember) => {
+  const matchedCast = media.credits?.cast?.find((castMember) => {
     const castPersonId = castMember?.person?._id ?? castMember?.person;
 
     return castPersonId && String(castPersonId) === targetId;
   });
 
-  const isDirector = mediaDoc.credits?.directors?.some((director) => {
+  const isDirector = media.credits?.directors?.some((director) => {
     const directorId = director?._id ?? director;
     return directorId && String(directorId) === targetId;
   });
 
-  const isWriter = mediaDoc.credits?.writers?.some((writer) => {
+  const isWriter = media.credits?.writers?.some((writer) => {
     const writerId = writer?._id ?? writer;
     return writerId && String(writerId) === targetId;
   });
 
   return {
-    id: mediaDoc.id ?? mediaDoc._id?.toString?.() ?? null,
-    slug: mediaDoc.slug,
-    type: mediaDoc.type,
-    title: mediaDoc.title,
-    originalTitle: mediaDoc.originalTitle ?? "",
-    releaseYear: mediaDoc.releaseYear,
-    poster:
-      mediaDoc.assets?.poster?.vertical || mediaDoc.assets?.poster || null,
+    id: getEntityId(media),
+    slug: media.slug,
+    type: media.type,
+    title: media.title,
+    originalTitle: media.originalTitle ?? "",
+    releaseYear: media.releaseYear,
+    poster: media.assets?.poster?.vertical || media.assets?.poster || null,
     rating: mediaDoc.rating ?? null,
     asCast: matchedCast
       ? {
