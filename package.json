@@ -7,6 +7,12 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "imports": {
+    "#config/*": "./src/config/*.js",
+    "#middlewares/*": "./src/middlewares/*.js",
+    "#modules/*": "./src/modules/*.js",
+    "#shared/*": "./src/shared/*.js"
+  },
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",

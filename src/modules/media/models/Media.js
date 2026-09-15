@@ -15,7 +15,7 @@ const posterSchema = new mongoose.Schema(
     horizontal: { type: String, default: "", trim: true },
     backdrop: { type: String, default: "", trim: true },
   },
-  { _id: false },
+  { _id: false, autoIndex: false },
 );
 
 const trailerSchema = new mongoose.Schema(
@@ -37,7 +37,7 @@ const trailerSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  { _id: false },
+  { _id: false, autoIndex: false },
 );
 
 const assetsSchema = new mongoose.Schema(
@@ -52,7 +52,7 @@ const assetsSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { _id: false },
+  { _id: false, autoIndex: false },
 );
 
 const castSchema = new mongoose.Schema(
@@ -76,7 +76,7 @@ const castSchema = new mongoose.Schema(
       },
     },
   },
-  { _id: false },
+  { _id: false, autoIndex: false },
 );
 
 const seriesDetailsSchema = new mongoose.Schema(
@@ -90,7 +90,7 @@ const seriesDetailsSchema = new mongoose.Schema(
       default: "ongoing",
     },
   },
-  { _id: false },
+  { _id: false, autoIndex: false },
 );
 
 const mediaSchema = new mongoose.Schema(
@@ -98,7 +98,6 @@ const mediaSchema = new mongoose.Schema(
     slug: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       lowercase: true,
     },
@@ -111,14 +110,11 @@ const mediaSchema = new mongoose.Schema(
       fa: { type: String, required: true, trim: true },
       en: { type: String, required: true, trim: true },
     },
-
     originalTitle: { type: String, trim: true },
-
     summary: {
       fa: { type: String, required: true, trim: true },
       en: { type: String, default: "", trim: true },
     },
-
     releaseYear: {
       type: Number,
       required: true,
@@ -128,7 +124,6 @@ const mediaSchema = new mongoose.Schema(
         message: "releaseYear is too far in the future",
       },
     },
-
     ageRating: {
       type: String,
       enum: [
@@ -149,7 +144,6 @@ const mediaSchema = new mongoose.Schema(
       ],
       default: null,
     },
-
     duration: {
       type: Number,
       min: 0,
@@ -164,7 +158,6 @@ const mediaSchema = new mongoose.Schema(
         message: "Duration is required for movies and must be greater than 0",
       },
     },
-
     genres: [
       {
         type: String,
@@ -195,7 +188,6 @@ const mediaSchema = new mongoose.Schema(
     countries: [{ type: String, trim: true }],
     languages: [{ type: String, trim: true }],
     assets: { type: assetsSchema, required: true },
-
     rating: {
       imdb: {
         type: Number,
@@ -221,7 +213,6 @@ const mediaSchema = new mongoose.Schema(
         },
       },
     },
-
     credits: {
       directors: [
         {
@@ -237,21 +228,17 @@ const mediaSchema = new mongoose.Schema(
       ],
       cast: [castSchema],
     },
-
     seriesDetails: {
       type: seriesDetailsSchema,
       default: null,
-
       validate: {
         validator: function (value) {
           if (this.type === "series" && !value) return false;
-
           return true;
         },
         message: "seriesDetails is required for series type.",
       },
     },
-
     collectionInfo: {
       collection: {
         type: mongoose.Schema.Types.ObjectId,
@@ -276,7 +263,6 @@ const mediaSchema = new mongoose.Schema(
         },
       },
     },
-
     isTop10: {
       type: Boolean,
       default: false,
@@ -293,11 +279,11 @@ const mediaSchema = new mongoose.Schema(
   {
     timestamps: true,
     id: false,
+    autoIndex: false,
     toJSON: {
       virtuals: true,
       transform: cleanMediaTransform,
     },
-
     toObject: {
       virtuals: true,
       transform: cleanMediaTransform,
@@ -305,30 +291,78 @@ const mediaSchema = new mongoose.Schema(
   },
 );
 
-// فیلترها و مرتب‌سازی‌های ترکیبی
-mediaSchema.index({ type: 1, createdAt: -1 });
-mediaSchema.index({ genres: 1, createdAt: -1 });
-mediaSchema.index({ languages: 1, createdAt: -1 });
+// ۱. ایندکس یکتا برای اسلاگ
+mediaSchema.index({ slug: 1 }, { unique: true, name: "uniq_slug" });
 
-// ایندکس‌های مربوط به رفرنس‌های People
-mediaSchema.index({ "credits.directors": 1 });
-mediaSchema.index({ "credits.writers": 1 });
-mediaSchema.index({ "credits.cast.person": 1 });
+// ۲. ایندکس پیش‌فرض سورت زمانی برای کوئری‌های عمومی بدون فیلتر (مانند findAll)
+mediaSchema.index({ createdAt: -1, _id: -1 }, { name: "idx_createdAt_id" });
 
-// ایندکس پارشیال پرسرعت و بهینه برای بخش Top 10
+// ۳. فیلترها و مرتب‌سازی‌های ترکیبی بر اساس ESR
 mediaSchema.index(
-  { "rating.imdb": -1, createdAt: -1 },
-  { partialFilterExpression: { isTop10: true } },
+  { type: 1, createdAt: -1, _id: -1 },
+  { name: "idx_type_createdAt_id" },
+);
+mediaSchema.index(
+  { genres: 1, createdAt: -1, _id: -1 },
+  { name: "idx_genres_createdAt_id" },
+);
+mediaSchema.index(
+  { languages: 1, createdAt: -1, _id: -1 },
+  { name: "idx_languages_createdAt_id" },
 );
 
-// ایندکس جهت برطرف کردن Full Scan در متد findTopImdb
-mediaSchema.index({ "rating.imdb": -1, "rating.voteCount": -1 });
+// ۴. ایندکس‌های مربوط به رفرنس‌های People (فیلموگرافی و ارتباطات)
+mediaSchema.index(
+  { "credits.directors": 1 },
+  { name: "idx_credits_directors" },
+);
+mediaSchema.index({ "credits.writers": 1 }, { name: "idx_credits_writers" });
+mediaSchema.index(
+  { "credits.cast.person": 1 },
+  { name: "idx_credits_cast_person" },
+);
 
-// کالکشن و زمان‌بندی فرنچایزها
-mediaSchema.index({ isUpcoming: 1, releaseYear: 1 });
-mediaSchema.index({
-  "collectionInfo.collection": 1,
-  "collectionInfo.order": 1,
-});
+// ۵. ایندکس پارشیال کامل برای بخش Top 10 منطبق بر تمامی سطوح مرتب‌سازی
+mediaSchema.index(
+  {
+    isTop10: 1,
+    "rating.imdb": -1,
+    "rating.voteCount": -1,
+    createdAt: -1,
+    _id: -1,
+  },
+  {
+    name: "idx_top10_full_sort",
+    partialFilterExpression: { isTop10: true },
+  },
+);
+
+// ۶. ایندکس متد findTopImdb منطبق بر الگوی سورت چندمرحله‌ای
+mediaSchema.index(
+  {
+    "rating.imdb": -1,
+    "rating.voteCount": -1,
+    createdAt: -1,
+    _id: -1,
+  },
+  {
+    name: "idx_top_imdb_full_sort",
+  },
+);
+
+// ۷. فیلم‌های آینده (Upcoming) با فیلتر پارشیال و سورت سال انتشار
+mediaSchema.index(
+  { isUpcoming: 1, releaseYear: 1, createdAt: -1, _id: -1 },
+  {
+    name: "idx_upcoming_releaseYear_createdAt_id",
+    partialFilterExpression: { isUpcoming: true },
+  },
+);
+
+// ۸. مجموعه‌ها و چندگانه‌ها (Collection Order)
+mediaSchema.index(
+  { "collectionInfo.collection": 1, "collectionInfo.order": 1, _id: 1 },
+  { name: "idx_collection_order_id" },
+);
 
 export const Media = mongoose.model("Media", mediaSchema);
