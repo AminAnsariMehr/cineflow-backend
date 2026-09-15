@@ -1,4 +1,3 @@
-// src/modules/people/models/Person.js
 import mongoose from "mongoose";
 
 const cleanPersonTransform = (_, ret) => {
@@ -63,7 +62,11 @@ const personSchema = new mongoose.Schema(
   },
 );
 
-personSchema.index({ "name.en": 1 });
-personSchema.index({ "name.fa": 1 });
+personSchema.index({ "name.en": 1, _id: 1 }, { name: "idx_person_name_en_id" });
+personSchema.index({ "name.fa": 1, _id: 1 }, { name: "idx_person_name_fa_id" });
+personSchema.index(
+  { primaryProfessions: 1, "name.en": 1, _id: 1 },
+  { name: "idx_person_profession_name_en_id" },
+);
 
 export const Person = mongoose.model("Person", personSchema);

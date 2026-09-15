@@ -291,10 +291,10 @@ const mediaSchema = new mongoose.Schema(
   },
 );
 
-// ۱. ایندکس یکتا برای اسلاگ
+// ۱. اسلاگ یکتا
 mediaSchema.index({ slug: 1 }, { unique: true, name: "uniq_slug" });
 
-// ۲. ایندکس پیش‌فرض سورت زمانی برای کوئری‌های عمومی بدون فیلتر (مانند findAll)
+// ۲. سورت زمانی عمومی
 mediaSchema.index({ createdAt: -1, _id: -1 }, { name: "idx_createdAt_id" });
 
 // ۳. فیلترها و مرتب‌سازی‌های ترکیبی بر اساس ESR
@@ -307,37 +307,43 @@ mediaSchema.index(
   { name: "idx_genres_createdAt_id" },
 );
 mediaSchema.index(
+  { type: 1, genres: 1, createdAt: -1, _id: -1 },
+  { name: "idx_type_genres_createdAt_id" },
+);
+mediaSchema.index(
   { languages: 1, createdAt: -1, _id: -1 },
   { name: "idx_languages_createdAt_id" },
 );
 
-// ۴. ایندکس‌های مربوط به رفرنس‌های People (فیلموگرافی و ارتباطات)
+// ۴. ایندکس‌های فیلموگرافی و عوامل
 mediaSchema.index(
-  { "credits.directors": 1 },
-  { name: "idx_credits_directors" },
+  { "credits.directors": 1, releaseYear: -1, createdAt: -1, _id: -1 },
+  { name: "idx_credits_directors_sort" },
 );
-mediaSchema.index({ "credits.writers": 1 }, { name: "idx_credits_writers" });
 mediaSchema.index(
-  { "credits.cast.person": 1 },
-  { name: "idx_credits_cast_person" },
+  { "credits.writers": 1, releaseYear: -1, createdAt: -1, _id: -1 },
+  { name: "idx_credits_writers_sort" },
+);
+mediaSchema.index(
+  { "credits.cast.person": 1, releaseYear: -1, createdAt: -1, _id: -1 },
+  { name: "idx_credits_cast_person_sort" },
 );
 
-// ۵. ایندکس پارشیال کامل برای بخش Top 10 منطبق بر تمامی سطوح مرتب‌سازی
+// ۵. ایندکس پارشیال Top 10
 mediaSchema.index(
   {
-    isTop10: 1,
     "rating.imdb": -1,
     "rating.voteCount": -1,
     createdAt: -1,
     _id: -1,
   },
   {
-    name: "idx_top10_full_sort",
+    name: "idx_top10_partial_sort",
     partialFilterExpression: { isTop10: true },
   },
 );
 
-// ۶. ایندکس متد findTopImdb منطبق بر الگوی سورت چندمرحله‌ای
+// ۶. رتبه‌بندی عمومی Top IMDb
 mediaSchema.index(
   {
     "rating.imdb": -1,
@@ -350,16 +356,16 @@ mediaSchema.index(
   },
 );
 
-// ۷. فیلم‌های آینده (Upcoming) با فیلتر پارشیال و سورت سال انتشار
+// ۷. فیلم‌های آینده (Upcoming) با فیلتر پارشیال
 mediaSchema.index(
-  { isUpcoming: 1, releaseYear: 1, createdAt: -1, _id: -1 },
+  { releaseYear: 1, createdAt: -1, _id: -1 },
   {
     name: "idx_upcoming_releaseYear_createdAt_id",
     partialFilterExpression: { isUpcoming: true },
   },
 );
 
-// ۸. مجموعه‌ها و چندگانه‌ها (Collection Order)
+// ۸. مجموعه‌ها و چندگانه‌ها
 mediaSchema.index(
   { "collectionInfo.collection": 1, "collectionInfo.order": 1, _id: 1 },
   { name: "idx_collection_order_id" },

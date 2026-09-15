@@ -55,7 +55,6 @@ const seasonSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Media",
       required: true,
-      index: true,
     },
     seasonNumber: {
       type: Number,
@@ -100,6 +99,9 @@ const seasonSchema = new mongoose.Schema(
   },
 );
 
-seasonSchema.index({ mediaId: 1, seasonNumber: 1 }, { unique: true });
+seasonSchema.index(
+  { mediaId: 1, seasonNumber: 1 },
+  { unique: true, name: "uniq_mediaId_seasonNumber" },
+);
 
 export const Season = mongoose.model("Season", seasonSchema);

@@ -61,12 +61,12 @@ const extractId = (value) => {
 
 export const mediaService = {
   async getAllMedia(query = {}) {
-    const items = await mediaRepository.findAll(normalizeQuery(query));
+    const items = await mediaRepository.findAll(normalizeQueryObject(query));
     return safeMap(items, toMediaListDto);
   },
 
   async getMediaBySlug(slug) {
-    const normalizedSlug = normalizeSlug(slug);
+    const normalizedSlug = normalizeSlug(slug, { fieldName: "Media slug" });
 
     if (!normalizedSlug) {
       throw new BadRequestError(
@@ -91,28 +91,34 @@ export const mediaService = {
   },
 
   async getTop10(query = {}) {
-    const items = await mediaRepository.findTop10(normalizeQuery(query));
+    const items = await mediaRepository.findTop10(normalizeQueryObject(query));
     return safeMap(items, toMediaListDto);
   },
 
   async getTopImdb(query = {}) {
-    const items = await mediaRepository.findTopImdb(normalizeQuery(query));
+    const items = await mediaRepository.findTopImdb(
+      normalizeQueryObject(query),
+    );
     return safeMap(items, toMediaListDto);
   },
 
   async getUpcoming(query = {}) {
-    const items = await mediaRepository.findUpcoming(normalizeQuery(query));
+    const items = await mediaRepository.findUpcoming(
+      normalizeQueryObject(query),
+    );
     return safeMap(items, toMediaListDto);
   },
 
   async getAnimations(query = {}) {
-    const items = await mediaRepository.findAnimations(normalizeQuery(query));
+    const items = await mediaRepository.findAnimations(
+      normalizeQueryObject(query),
+    );
     return safeMap(items, toMediaListDto);
   },
 
   async getPersianDubbed(query = {}) {
     const items = await mediaRepository.findPersianDubbed(
-      normalizeQuery(query),
+      normalizeQueryObject(query),
     );
     return safeMap(items, toMediaListDto);
   },
@@ -124,7 +130,7 @@ export const mediaService = {
 
     const items = await mediaRepository.findFilmographyByPersonId(
       personObjectId,
-      query,
+      normalizeQueryObject(query),
     );
 
     return safeMap(items, (media) =>
