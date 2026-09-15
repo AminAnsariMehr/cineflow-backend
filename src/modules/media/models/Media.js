@@ -187,6 +187,7 @@ const mediaSchema = new mongoose.Schema(
     ],
     countries: [{ type: String, trim: true }],
     languages: [{ type: String, trim: true }],
+    hasPersianDub: { type: Boolean, default: false },
     assets: { type: assetsSchema, required: true },
     rating: {
       imdb: {
@@ -369,6 +370,15 @@ mediaSchema.index(
 mediaSchema.index(
   { "collectionInfo.collection": 1, "collectionInfo.order": 1, _id: 1 },
   { name: "idx_collection_order_id" },
+);
+
+// ۹. آثار دوبله فارسی با فیلتر پارشیال و سورت زمانی
+mediaSchema.index(
+  { createdAt: -1, _id: -1 },
+  {
+    name: "idx_hasPersianDub_createdAt_id",
+    partialFilterExpression: { hasPersianDub: true },
+  },
 );
 
 export const Media = mongoose.model("Media", mediaSchema);

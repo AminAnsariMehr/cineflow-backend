@@ -1,5 +1,5 @@
 import { Person } from "../models/Person.js";
-import { normalizeLimit } from "../../../shared/utils/query.util.js";
+import { normalizePagination } from "../../../shared/utils/pagination.util.js";
 
 const PERSON_PUBLIC_PROJECTION = {
   _id: 1,
@@ -24,22 +24,31 @@ const normalizeStringQuery = (value) => {
 };
 
 export const peopleRepository = {
-  async findAll({ profession, limit } = {}) {
+  async findAll(query = {}) {
     const filter = {};
+    const { profession } = query;
     const normalizedProfession = normalizeStringQuery(profession);
 
     if (normalizedProfession) {
       filter.primaryProfessions = normalizedProfession;
     }
 
-    return Person.find(filter)
-      .select(PERSON_PUBLIC_PROJECTION)
-      .sort({
-        "name.en": 1,
-        _id: 1,
-      })
-      .limit(normalizeLimit(limit))
-      .lean();
+    const { page, limit, skip } = normalizePagination(query);
+
+    const [items, totalItems] = await Promise.all([
+      Person.find(filter)
+        .select(PERSON_PUBLIC_PROJECTION)
+        .sort({
+          "name.en": 1,
+          _id: 1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Person.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
   async findBySlug(slug) {

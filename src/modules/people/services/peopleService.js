@@ -1,27 +1,35 @@
 import { peopleRepository } from "../repositories/peopleRepository.js";
-import { NotFoundError } from "../../../shared/errors/AppError.js";
+import {
+  NotFoundError,
+  BadRequestError,
+} from "../../../shared/errors/AppError.js";
+import { buildPaginationMeta } from "#shared/utils/pagination.util";
 import { mediaService } from "../../media/services/mediaService.js";
 import { toPersonDetailsDto } from "../mappers/peopleMapper.js";
 
 const normalizeSlug = (slug) => {
-  if (typeof slug !== "string") {
-    return "";
-  }
-
+  if (typeof slug !== "string") return "";
   return slug.trim().toLowerCase();
 };
 
 export const peopleService = {
   async getAllPeople(query = {}) {
-    const people = await peopleRepository.findAll(query);
-    return people.map(toPersonDetailsDto);
+    const { items, totalItems, page, limit } =
+      await peopleRepository.findAll(query);
+
+    return {
+      data: items.map(toPersonDetailsDto).filter(Boolean),
+      pagination: buildPaginationMeta(totalItems, page, limit),
+    };
   },
 
   async getPersonBySlug(slug, query = {}) {
     const normalizedSlug = normalizeSlug(slug);
 
     if (!normalizedSlug) {
-      throw new NotFoundError("Person slug is required");
+      throw new BadRequestError(
+        "Person slug is required and must be a valid string",
+      );
     }
 
     const person = await peopleRepository.findBySlug(normalizedSlug);

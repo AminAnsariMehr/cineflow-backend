@@ -1,40 +1,12 @@
 import { mediaRepository } from "../repositories/mediaRepository.js";
+import { normalizeQueryObject, normalizeSlug } from "#shared/utils/string.util";
+import { buildPaginationMeta } from "#shared/utils/pagination.util";
 import {
   NotFoundError,
   BadRequestError,
 } from "../../../shared/errors/AppError.js";
 import { toMediaListDto, toMediaDetailsDto } from "../mappers/mediaMapper.js";
 import { toFilmographyItemDto } from "../../people/mappers/peopleMapper.js";
-
-// const normalizeSlug = (slug) => {
-//   if (typeof slug !== "string") return "";
-//   try {
-//     return decodeURIComponent(slug).trim().toLowerCase();
-//   } catch {
-//     return slug.trim().toLowerCase();
-//   }
-// };
-
-const normalizeSlug = (slug) => {
-  if (typeof slug !== "string") {
-    return "";
-  }
-
-  let decodedSlug;
-  try {
-    decodedSlug = decodeURIComponent(slug);
-  } catch {
-    throw new BadRequestError("Media slug contains invalid URL encoding");
-  }
-
-  return decodedSlug.trim().toLowerCase();
-};
-
-const normalizeQuery = (query) => {
-  return query && typeof query === "object" && !Array.isArray(query)
-    ? query
-    : {};
-};
 
 const safeMap = (items, mapper) => {
   if (!Array.isArray(items)) return [];
@@ -57,6 +29,14 @@ const extractId = (value) => {
   }
 
   return null;
+};
+
+const formatPaginatedResult = (result, mapper) => {
+  const { items = [], totalItems = 0, page = 1, limit = 20 } = result || {};
+  return {
+    data: safeMap(items, mapper),
+    pagination: buildPaginationMeta(totalItems, page, limit),
+  };
 };
 
 export const mediaService = {
@@ -92,49 +72,59 @@ export const mediaService = {
 
   async getTop10(query = {}) {
     const items = await mediaRepository.findTop10(normalizeQueryObject(query));
-    return safeMap(items, toMediaListDto);
+    return formatPaginatedResult(items, toMediaListDto);
   },
 
   async getTopImdb(query = {}) {
     const items = await mediaRepository.findTopImdb(
       normalizeQueryObject(query),
     );
-    return safeMap(items, toMediaListDto);
+    return formatPaginatedResult(items, toMediaListDto);
   },
 
   async getUpcoming(query = {}) {
     const items = await mediaRepository.findUpcoming(
       normalizeQueryObject(query),
     );
-    return safeMap(items, toMediaListDto);
+    return formatPaginatedResult(items, toMediaListDto);
   },
 
   async getAnimations(query = {}) {
     const items = await mediaRepository.findAnimations(
       normalizeQueryObject(query),
     );
-    return safeMap(items, toMediaListDto);
+    return formatPaginatedResult(items, toMediaListDto);
   },
 
   async getPersianDubbed(query = {}) {
-    const items = await mediaRepository.findPersianDubbed(
+    const result = await mediaRepository.findPersianDubbed(
       normalizeQueryObject(query),
     );
-    return safeMap(items, toMediaListDto);
+    return formatPaginatedResult(result, toMediaListDto);
   },
 
   async getFilmographyByPersonId(personObjectId, query = {}) {
     if (!personObjectId) {
-      return [];
+      return {
+        data: [],
+        pagination: buildPaginationMeta(0, 1, 50),
+      };
     }
 
-    const items = await mediaRepository.findFilmographyByPersonId(
+    const result = await mediaRepository.findFilmographyByPersonId(
       personObjectId,
       normalizeQueryObject(query),
     );
 
-    return safeMap(items, (media) =>
-      toFilmographyItemDto(media, personObjectId),
-    );
+    return {
+      data: safeMap(result.items, (media) =>
+        toFilmographyItemDto(media, personObjectId),
+      ),
+      pagination: buildPaginationMeta(
+        result.totalItems,
+        result.page,
+        result.limit,
+      ),
+    };
   },
 };

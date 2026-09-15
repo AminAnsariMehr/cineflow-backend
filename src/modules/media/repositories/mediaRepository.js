@@ -1,5 +1,5 @@
 import { Media } from "../models/Media.js";
-import { normalizeLimit } from "../../../shared/utils/query.util.js";
+import { normalizePagination } from "../../../shared/utils/pagination.util.js";
 import {
   MEDIA_LIST_PROJECTION,
   MEDIA_DETAILS_PROJECTION,
@@ -15,24 +15,35 @@ const normalizeStringQuery = (value) => {
 };
 
 export const mediaRepository = {
-  async findAll({ type, genre, limit } = {}) {
+  async findAll(query = {}) {
     const filter = {};
+    const { type, genre, language } = query;
 
     const normalizedType = normalizeStringQuery(type);
     const normalizedGenre = normalizeStringQuery(genre);
+    const normalizedLanguage = normalizeStringQuery(language);
 
     if (normalizedType) filter.type = normalizedType;
     if (normalizedGenre) filter.genres = normalizedGenre;
+    if (normalizedLanguage) filter.languages = normalizedLanguage;
 
-    return Media.find(filter)
-      .select(MEDIA_LIST_PROJECTION)
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(normalizeLimit(limit))
-      .lean();
+    const { page, limit, skip } = normalizePagination(query);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select(MEDIA_LIST_PROJECTION)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
   async findBySlug(slug) {
-    const normalizedSlug = normalizeStringQuery(slug);
+    const normalizedSlug = normalizeSlugParam(slug);
     if (!normalizedSlug) return null;
 
     return Media.findOne({ slug: normalizedSlug })
@@ -70,87 +81,150 @@ export const mediaRepository = {
       .lean();
   },
 
-  async findTop10({ limit } = {}) {
-    return Media.find({
+  async findTop10(query = {}) {
+    const filter = {
       isTop10: true,
-      "rating.imdb": { $exists: true, $ne: null },
-    })
-      .select(MEDIA_LIST_PROJECTION)
-      .sort({
-        "rating.imdb": -1,
-        "rating.voteCount": -1,
-        createdAt: -1,
-        _id: -1,
-      })
-      .limit(normalizeLimit(limit, 10, 10))
-      .lean();
+      "rating.imdb": { $gt: 0 },
+    };
+
+    const { page, limit, skip } = normalizePagination(query, 10, 10);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select(MEDIA_LIST_PROJECTION)
+        .sort({
+          "rating.imdb": -1,
+          "rating.voteCount": -1,
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
-  async findTopImdb({ limit } = {}) {
-    return Media.find({
-      "rating.imdb": { $exists: true, $ne: null },
-    })
-      .select(MEDIA_LIST_PROJECTION)
-      .sort({
-        "rating.imdb": -1,
-        "rating.voteCount": -1,
-        createdAt: -1,
-        _id: -1,
-      })
-      .limit(normalizeLimit(limit))
-      .lean();
+  async findTopImdb(query = {}) {
+    const filter = {
+      "rating.imdb": { $gt: 0 },
+    };
+
+    const { page, limit, skip } = normalizePagination(query);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select(MEDIA_LIST_PROJECTION)
+        .sort({
+          "rating.imdb": -1,
+          "rating.voteCount": -1,
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
-  async findUpcoming({ limit } = {}) {
-    return Media.find({ isUpcoming: true })
-      .select(MEDIA_LIST_PROJECTION)
-      .sort({
-        releaseYear: 1,
-        createdAt: -1,
-        _id: -1,
-      })
-      .limit(normalizeLimit(limit))
-      .lean();
+  async findUpcoming(query = {}) {
+    const filter = { isUpcoming: true };
+    const { page, limit, skip } = normalizePagination(query);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select(MEDIA_LIST_PROJECTION)
+        .sort({
+          releaseYear: 1,
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
-  async findAnimations({ limit } = {}) {
-    return Media.find({ genres: "Animation" })
-      .select(MEDIA_LIST_PROJECTION)
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(normalizeLimit(limit))
-      .lean();
+  async findAnimations(query = {}) {
+    const filter = { genres: "Animation" };
+    const { page, limit, skip } = normalizePagination(query);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select(MEDIA_LIST_PROJECTION)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
-  async findPersianDubbed({ limit } = {}) {
-    return Media.find({
-      languages: { $in: ["دوبله فارسی", "فارسی", "Persian"] },
-    })
-      .select(MEDIA_LIST_PROJECTION)
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(normalizeLimit(limit))
-      .lean();
+  async findPersianDubbed(query = {}) {
+    const filter = { hasPersianDub: true };
+    const { page, limit, skip } = normalizePagination(query);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select(MEDIA_LIST_PROJECTION)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
 
-  async findFilmographyByPersonId(personObjectId, { limit } = {}) {
-    if (!personObjectId) return [];
+  async findFilmographyByPersonId(personObjectId, query = {}) {
+    if (!personObjectId) {
+      return { items: [], totalItems: 0, page: 1, limit: 50 };
+    }
 
-    return Media.find({
+    const filter = {
       $or: [
         { "credits.cast.person": personObjectId },
         { "credits.directors": personObjectId },
         { "credits.writers": personObjectId },
       ],
-    })
-      .select({
-        ...MEDIA_LIST_PROJECTION,
-        credits: 1,
-      })
-      .sort({
-        releaseYear: -1,
-        createdAt: -1,
-        _id: -1,
-      })
-      .limit(normalizeLimit(limit, 50, 100))
-      .lean();
+    };
+
+    const { page, limit, skip } = normalizePagination(query, 50, 100);
+
+    const [items, totalItems] = await Promise.all([
+      Media.find(filter)
+        .select({
+          ...MEDIA_LIST_PROJECTION,
+          credits: 1,
+        })
+        .sort({
+          releaseYear: -1,
+          createdAt: -1,
+          _id: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Media.countDocuments(filter),
+    ]);
+
+    return { items, totalItems, page, limit };
   },
+};
+
+const normalizeSlugParam = (value) => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized || null;
 };

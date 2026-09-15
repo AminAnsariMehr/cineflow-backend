@@ -3,12 +3,12 @@ import { peopleService } from "../services/peopleService.js";
 export const peopleController = {
   async getAllPeople(req, res, next) {
     try {
-      const data = await peopleService.getAllPeople(req.query);
+      const { data, pagination } = await peopleService.getAllPeople(req.query);
 
       return res.status(200).json({
         success: true,
-        count: data.length,
         data,
+        pagination,
       });
     } catch (error) {
       return next(error);
