@@ -63,17 +63,41 @@ const castSchema = new mongoose.Schema(
       required: true,
     },
     character: {
-      fa: { type: String, required: true, trim: true },
-      en: { type: String, required: true, trim: true },
+      fa: { type: String, trim: true, default: "" },
+      en: { type: String, trim: true, default: "" },
     },
     order: {
       type: Number,
-      min: 0,
-      default: 0,
+      required: true,
+      min: 1,
       validate: {
         validator: Number.isInteger,
         message: "Cast order must be an integer",
       },
+    },
+  },
+  { _id: false, autoIndex: false },
+);
+
+const localizedStringSchema = new mongoose.Schema(
+  {
+    fa: { type: String, trim: true, default: "" },
+    en: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
+
+const crewMemberSchema = new mongoose.Schema(
+  {
+    name: {
+      type: localizedStringSchema,
+      required: true,
+    },
+    role: {
+      type: String,
+      required: true,
+      trim: true,
+      // مثلا: composer, producer, cinematographer, editor
     },
   },
   { _id: false, autoIndex: false },
@@ -88,6 +112,26 @@ const seriesDetailsSchema = new mongoose.Schema(
       type: String,
       enum: ["ongoing", "completed", "renewed", "canceled"],
       default: "ongoing",
+    },
+  },
+  { _id: false, autoIndex: false },
+);
+
+const mediaCollectionItemSchema = new mongoose.Schema(
+  {
+    collectionRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Collection",
+      required: true,
+    },
+    order: {
+      type: Number,
+      required: true,
+      min: 1,
+      validate: {
+        validator: Number.isInteger,
+        message: "Collection order must be an integer",
+      },
     },
   },
   { _id: false, autoIndex: false },
@@ -215,19 +259,10 @@ const mediaSchema = new mongoose.Schema(
       },
     },
     credits: {
-      directors: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Person",
-        },
-      ],
-      writers: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Person",
-        },
-      ],
+      directors: [localizedStringSchema],
+      writers: [localizedStringSchema],
       cast: [castSchema],
+      crew: [crewMemberSchema],
     },
     seriesDetails: {
       type: seriesDetailsSchema,
@@ -240,30 +275,7 @@ const mediaSchema = new mongoose.Schema(
         message: "seriesDetails is required for series type.",
       },
     },
-    collectionInfo: {
-      collection: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Collection",
-        default: null,
-      },
-      order: {
-        type: Number,
-        min: 1,
-        default: null,
-        validate: {
-          validator: function (value) {
-            if (
-              this.collectionInfo?.collection &&
-              (value == null || value < 1)
-            ) {
-              return false;
-            }
-            return true;
-          },
-          message: "Order is required when a collection is assigned",
-        },
-      },
-    },
+    collections: [mediaCollectionItemSchema],
     isTop10: {
       type: Boolean,
       default: false,
@@ -368,7 +380,7 @@ mediaSchema.index(
 
 // ۸. مجموعه‌ها و چندگانه‌ها
 mediaSchema.index(
-  { "collectionInfo.collection": 1, "collectionInfo.order": 1, _id: 1 },
+  { "collections.collectionRef": 1, "collections.order": 1, _id: 1 },
   { name: "idx_collection_order_id" },
 );
 

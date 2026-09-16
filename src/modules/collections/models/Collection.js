@@ -23,21 +23,18 @@ const collectionSchema = new mongoose.Schema(
       en: { type: String, default: "", trim: true },
     },
     assets: {
-      poster: { type: String, default: "", trim: true },
+      poster: {
+        vertical: { type: String, default: "", trim: true },
+        horizontal: { type: String, default: "", trim: true },
+      },
       backdrop: { type: String, default: "", trim: true },
     },
   },
   {
     timestamps: true,
     id: false,
-    toJSON: {
-      virtuals: true,
-      transform: cleanCollectionTransform,
-    },
-    toObject: {
-      virtuals: true,
-      transform: cleanCollectionTransform,
-    },
+    toJSON: { virtuals: true, transform: cleanCollectionTransform },
+    toObject: { virtuals: true, transform: cleanCollectionTransform },
   },
 );
 

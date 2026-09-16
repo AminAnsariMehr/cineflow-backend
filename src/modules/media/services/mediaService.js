@@ -39,6 +39,45 @@ const formatPaginatedResult = (result, mapper) => {
   };
 };
 
+async function validateReferences(payload) {
+  const castPersonIds = new Set();
+  const collectionIds = new Set();
+
+  if (Array.isArray(payload.credits?.cast)) {
+    payload.credits.cast.forEach((item) => {
+      if (item?.person) castPersonIds.add(String(item.person));
+    });
+  }
+
+  if (Array.isArray(payload.collections)) {
+    payload.collections.forEach((item) => {
+      const id = item?.collectionRef || item?.collection;
+      if (id) collectionIds.add(String(id));
+    });
+  }
+
+  for (const id of castPersonIds) {
+    if (!isValidObjectId(id))
+      throw new BadRequestError(`Invalid Cast Person ID: ${id}`);
+  }
+  for (const id of collectionIds) {
+    if (!isValidObjectId(id))
+      throw new BadRequestError(`Invalid Collection ID: ${id}`);
+  }
+
+  const [peopleExist, collectionsExist] = await Promise.all([
+    peopleRepository.existsByIds(Array.from(castPersonIds)),
+    collectionRepository.existsByIds(Array.from(collectionIds)),
+  ]);
+
+  if (!peopleExist)
+    throw new BadRequestError(
+      "One or more specified Cast members do not exist",
+    );
+  if (!collectionsExist)
+    throw new BadRequestError("One or more specified Collections do not exist");
+}
+
 export const mediaService = {
   async getAllMedia(query = {}) {
     const items = await mediaRepository.findAll(normalizeQueryObject(query));

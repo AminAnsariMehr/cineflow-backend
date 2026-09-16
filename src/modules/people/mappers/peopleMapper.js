@@ -33,18 +33,7 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
 
   const matchedCast = media.credits?.cast?.find((castMember) => {
     const castPersonId = castMember?.person?._id ?? castMember?.person;
-
     return castPersonId && String(castPersonId) === targetId;
-  });
-
-  const isDirector = media.credits?.directors?.some((director) => {
-    const directorId = director?._id ?? director;
-    return directorId && String(directorId) === targetId;
-  });
-
-  const isWriter = media.credits?.writers?.some((writer) => {
-    const writerId = writer?._id ?? writer;
-    return writerId && String(writerId) === targetId;
   });
 
   return {
@@ -62,7 +51,5 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
           order: matchedCast.order ?? 0,
         }
       : null,
-    asDirector: Boolean(isDirector),
-    asWriter: Boolean(isWriter),
   };
 };

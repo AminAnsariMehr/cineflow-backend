@@ -22,7 +22,7 @@ export const MEDIA_DETAILS_PROJECTION = {
   ...MEDIA_LIST_PROJECTION,
   summary: 1,
   credits: 1,
-  collectionInfo: 1,
+  collections: 1,
   createdAt: 1,
   updatedAt: 1,
 };
@@ -49,7 +49,7 @@ export const COLLECTION_TIMELINE_PROJECTION = {
   releaseYear: 1,
   type: 1,
   "assets.poster": 1,
-  "collectionInfo.order": 1,
+  collections: 1,
 };
 
 export const mediaListProjection = MEDIA_LIST_PROJECTION;

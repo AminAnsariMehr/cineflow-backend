@@ -28,9 +28,19 @@ export const toCollectionDto = (collection) => {
   };
 };
 
-export const toCollectionTimelineItemDto = (mediaDoc) => {
+export const toCollectionTimelineItemDto = (mediaDoc, collectionId = null) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
+
+  let order = null;
+  if (collectionId && Array.isArray(media.collections)) {
+    const matched = media.collections.find(
+      (c) =>
+        String(c.collectionRef?._id || c.collectionRef) ===
+        String(collectionId),
+    );
+    if (matched) order = matched.order;
+  }
 
   return {
     id: getEntityId(media),
@@ -39,7 +49,7 @@ export const toCollectionTimelineItemDto = (mediaDoc) => {
     releaseYear: media.releaseYear ?? null,
     type: media.type ?? null,
     poster: getPosterUrl(media.assets),
-    order: media.collectionInfo?.order ?? null,
+    order,
   };
 };
 
@@ -70,10 +80,11 @@ export const toMediaListDto = (mediaDoc) => {
   };
 };
 
-export const toMediaDetailsDto = (mediaDoc, options = {}) => {
+export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
 
+  // بازیگران به همراه آبجکت شخص
   const cast = Array.isArray(media.credits?.cast)
     ? media.credits.cast
         .map((item) => {
@@ -89,27 +100,34 @@ export const toMediaDetailsDto = (mediaDoc, options = {}) => {
         .filter(Boolean)
     : [];
 
+  // کارگردان‌ها فقط شامل نام رشته‌ای
   const directors = Array.isArray(media.credits?.directors)
-    ? media.credits.directors.map(toPersonSummaryDto).filter(Boolean)
+    ? media.credits.directors
     : [];
 
+  // نویسنده‌ها فقط شامل نام رشته‌ای
   const writers = Array.isArray(media.credits?.writers)
-    ? media.credits.writers.map(toPersonSummaryDto).filter(Boolean)
+    ? media.credits.writers
     : [];
 
-  const collectionInfo = media.collectionInfo
-    ? {
-        collection: toCollectionDto(media.collectionInfo.collection),
-        order: media.collectionInfo.order ?? null,
-      }
-    : null;
+  // سایر عوامل به صورت { role, name }
+  const crew = Array.isArray(media.credits?.crew) ? media.credits.crew : [];
 
-  const rawTimeline = Array.isArray(options)
-    ? options
-    : (options.collectionTimeline ?? []);
-
-  const collectionTimeline = Array.isArray(rawTimeline)
-    ? rawTimeline.map(toCollectionTimelineItemDto).filter(Boolean)
+  const collections = Array.isArray(media.collections)
+    ? media.collections
+        .map((colItem) => {
+          const colDto = toCollectionDto(colItem.collectionRef);
+          if (!colDto) return null;
+          const timelineRaw = collectionTimelines[colDto.id] || [];
+          return {
+            collection: colDto,
+            order: colItem.order ?? null,
+            timeline: timelineRaw
+              .map((item) => toCollectionTimelineItemDto(item, colDto.id))
+              .filter(Boolean),
+          };
+        })
+        .filter(Boolean)
     : [];
 
   return {
@@ -134,9 +152,9 @@ export const toMediaDetailsDto = (mediaDoc, options = {}) => {
       cast,
       directors,
       writers,
+      crew,
     },
-    collectionInfo,
-    collectionTimeline,
+    collections,
     createdAt: media.createdAt ?? null,
     updatedAt: media.updatedAt ?? null,
     isTop10: Boolean(media.isTop10),

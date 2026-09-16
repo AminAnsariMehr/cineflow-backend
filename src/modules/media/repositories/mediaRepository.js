@@ -53,15 +53,7 @@ export const mediaRepository = {
         select: PERSON_SUMMARY_PROJECTION,
       })
       .populate({
-        path: "credits.directors",
-        select: PERSON_SUMMARY_PROJECTION,
-      })
-      .populate({
-        path: "credits.writers",
-        select: PERSON_SUMMARY_PROJECTION,
-      })
-      .populate({
-        path: "collectionInfo.collection",
+        path: "collections.collectionRef",
         select: COLLECTION_SUMMARY_PROJECTION,
       })
       .lean();
@@ -71,7 +63,7 @@ export const mediaRepository = {
     if (!collectionId) return [];
 
     return Media.find({
-      "collectionInfo.collection": collectionId,
+      "collectionInfo.collectionRef": collectionId,
     })
       .select(COLLECTION_TIMELINE_PROJECTION)
       .sort({
