@@ -1,5 +1,5 @@
 import { MediaCollection } from "#modules/media/models/Collection";
-import { normalizePagination } from "#shared/utils/pagination.util";
+import { normalizePagination } from "#shared/utils/pagination.util.js";
 import { COLLECTION_SUMMARY_PROJECTION } from "#modules/media/repositories/media.projections";
 
 export const collectionRepository = {

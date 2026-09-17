@@ -1,4 +1,4 @@
-import { getEntityId, toPlainObject } from "#shared/mongoose/entityId";
+import { getEntityId, toPlainObject } from "#shared/mongoose/entityId.js";
 
 export const toPersonDetailsDto = (personDoc) => {
   const person = toPlainObject(personDoc);

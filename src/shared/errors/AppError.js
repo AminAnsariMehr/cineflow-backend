@@ -1,3 +1,5 @@
+// ---------------- src/shared/errors/AppError.js ----------------
+
 export class AppError extends Error {
   constructor(message, statusCode = 500) {
     super(message);
@@ -18,5 +20,11 @@ export class NotFoundError extends AppError {
 export class BadRequestError extends AppError {
   constructor(message = "Bad request") {
     super(message, 400);
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message = "Resource already exists") {
+    super(message, 409);
   }
 }

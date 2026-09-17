@@ -2,7 +2,10 @@ import { collectionRepository } from "../repositories/collectionRepository.js";
 import { mediaRepository } from "#modules/media/repositories/mediaRepository";
 import { toCollectionDto } from "#modules/media/mappers/mediaMapper";
 import { buildPaginationMeta } from "#shared/utils/pagination.util";
-import { normalizeSlug, normalizeQueryObject } from "#shared/utils/string.util";
+import {
+  normalizeSlug,
+  normalizeQueryObject,
+} from "#shared/utils/string.util.js";
 import { NotFoundError, BadRequestError } from "#shared/errors/AppError";
 import { isValidObjectId } from "#shared/utils/objectId.util";
 

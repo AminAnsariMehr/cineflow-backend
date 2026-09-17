@@ -1,4 +1,4 @@
-import { getEntityId, toPlainObject } from "#shared/mongoose/entityId";
+import { getEntityId, toPlainObject } from "#shared/mongoose/entityId.js";
 
 const getPosterUrl = (assets) =>
   assets?.poster?.vertical ?? assets?.poster?.horizontal ?? null;

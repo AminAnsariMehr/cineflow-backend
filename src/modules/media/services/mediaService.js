@@ -1,6 +1,9 @@
 import { mediaRepository } from "../repositories/mediaRepository.js";
-import { normalizeQueryObject, normalizeSlug } from "#shared/utils/string.util";
-import { buildPaginationMeta } from "#shared/utils/pagination.util";
+import {
+  normalizeQueryObject,
+  normalizeSlug,
+} from "#shared/utils/string.util.js";
+import { buildPaginationMeta } from "#shared/utils/pagination.util.js";
 import {
   NotFoundError,
   BadRequestError,
