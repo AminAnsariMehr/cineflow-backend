@@ -34,6 +34,14 @@ bower_components
 # node-waf configuration
 .lock-wscript
 
+# User Uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
+/public/uploads/avatars/*
+!/public/uploads/avatars/.gitkeep
+/public/uploads/**/*
+!/public/uploads/**/.gitkeep
+
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 

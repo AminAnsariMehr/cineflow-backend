@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { peopleController } from "../controllers/peopleController.js";
-import { uploadAvatar } from "./../../../middlewares/upload.middleware.js";
+import { uploadAvatar } from "#middlewares/upload.middleware.js";
 
 const router = Router();
 

@@ -11,6 +11,9 @@
     "#config/*": "./src/config/*",
     "#middlewares/*": "./src/middlewares/*",
     "#modules/*": "./src/modules/*",
+    "#media/*": "./src/modules/media/*",
+    "#collections/*": "./src/modules/collections/*",
+    "#people/*": "./src/modules/people/*",
     "#shared/*": "./src/shared/*"
   },
   "scripts": {

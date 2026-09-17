@@ -36,6 +36,12 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
     return castPersonId && String(castPersonId) === targetId;
   });
 
+  // جستجو در عوامل پشت صحنه (کارگردان، نویسنده، و ...)
+  const matchedCrew = media.credits?.crew?.filter((crewMember) => {
+    const crewPersonId = crewMember?.person?._id ?? crewMember?.person;
+    return crewPersonId && String(crewPersonId) === targetId;
+  });
+
   return {
     id: getEntityId(media),
     slug: media.slug,
@@ -43,13 +49,21 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
     title: media.title,
     originalTitle: media.originalTitle ?? "",
     releaseYear: media.releaseYear,
-    poster: media.assets?.poster?.vertical || media.assets?.poster || null,
-    rating: mediaDoc.rating ?? null,
+    poster:
+      typeof media.assets?.poster?.vertical === "string"
+        ? media.assets.poster.vertical
+        : typeof media.assets?.poster === "string"
+          ? media.assets.poster
+          : null,
+    rating: media.rating ?? null,
     asCast: matchedCast
       ? {
           character: matchedCast.character ?? null,
           order: matchedCast.order ?? 0,
         }
+      : null,
+    asCrew: matchedCrew?.length
+      ? matchedCrew.map((c) => ({ job: c.job, department: c.department }))
       : null,
   };
 };

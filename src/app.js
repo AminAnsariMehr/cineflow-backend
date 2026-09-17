@@ -3,13 +3,15 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
+import path from "path";
+
 import { env } from "./config/env.js";
 
 // --------------------- Middlewares ---------------------
 import {
   errorHandler,
   notFoundHandler,
-} from "./middlewares/error.middleware.js";
+} from "#middlewares/error.middleware.js";
 
 // ----------------------- Module ------------------------
 import { mediaModule } from "./modules/media/media.module.js";
@@ -40,6 +42,8 @@ app.use(
     limit: "1mb",
   }),
 );
+
+app.use(express.static(path.resolve("public")));
 
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 

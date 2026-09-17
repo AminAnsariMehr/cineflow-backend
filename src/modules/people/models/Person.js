@@ -26,7 +26,8 @@ const personSchema = new mongoose.Schema(
       type: String,
       default: null,
       validate: {
-        validator: (v) => v == null || /^\d{4}-\d{2}-\d{2}$/.test(v),
+        validator: (v) =>
+          v == null || v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v),
         message: "Date must be in YYYY-MM-DD format",
       },
     },
@@ -34,7 +35,8 @@ const personSchema = new mongoose.Schema(
       type: String,
       default: null,
       validate: {
-        validator: (v) => v == null || /^\d{4}-\d{2}-\d{2}$/.test(v),
+        validator: (v) =>
+          v == null || v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v),
         message: "Date must be in YYYY-MM-DD format",
       },
     },
@@ -67,6 +69,11 @@ personSchema.index({ "name.fa": 1, _id: 1 }, { name: "idx_person_name_fa_id" });
 personSchema.index(
   { primaryProfessions: 1, "name.en": 1, _id: 1 },
   { name: "idx_person_profession_name_en_id" },
+);
+
+personSchema.index(
+  { "name.en": "text", "name.fa": "text" },
+  { weights: { "name.en": 2, "name.fa": 1 }, name: "idx_person_name_text" },
 );
 
 export const Person = mongoose.model("Person", personSchema);

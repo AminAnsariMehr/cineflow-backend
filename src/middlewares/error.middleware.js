@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import multer from "multer";
 import { env } from "../config/env.js";
 
 const isDevelopment = env.nodeEnv === "development";
@@ -26,10 +27,8 @@ const getDuplicateKeyMessage = (error) => {
 
 export const notFoundHandler = (req, res, next) => {
   const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
-
   error.statusCode = 404;
   error.isOperational = true;
-
   next(error);
 };
 
@@ -42,8 +41,17 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   let statusCode = Number.isInteger(err?.statusCode) ? err.statusCode : 500;
-
   let message = err?.message || "Internal Server Error";
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      statusCode = 400;
+      message = "File size exceeds the 5MB limit";
+    } else {
+      statusCode = 400;
+      message = `Upload error: ${err.message}`;
+    }
+  }
 
   if (
     err instanceof SyntaxError &&
