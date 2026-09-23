@@ -8,7 +8,8 @@
       "#config/*": ["./src/config/*"],
       "#middlewares/*": ["./src/middlewares/*"],
       "#modules/*": ["./src/modules/*"],
-      "#shared/*": ["./src/shared/*"]
+      "#shared/*": ["./src/shared/*"],
+      "#utils/*": ["./src/shared/utils/*"]
     }
   },
   "include": ["src/**/*.js", "src/stores/usePeopleStore.ts"]

@@ -1,117 +1,145 @@
+import slugify from "slugify";
 import { peopleRepository } from "../repositories/peopleRepository.js";
 import {
-  NotFoundError,
-  BadRequestError,
-  ConflictError,
-} from "#shared/errors/AppError.js";
-import { buildPaginationMeta } from "#shared/utils/pagination.util.js";
-import { mediaService } from "../../media/services/mediaService.js";
-import { toPersonDetailsDto } from "../mappers/peopleMapper.js";
+  toPersonDetailsDto,
+  toFilmographyItemDto,
+} from "../mappers/peopleMapper.js";
+import { Media } from "../../media/models/Media.js";
+import { NotFoundError, ConflictError } from "#shared/errors/AppError.js";
 import { removeFileSafely } from "#shared/utils/file.util.js";
+import { normalizePersonalRelationships } from "../utils/relationship.util.js";
 
-const normalizeSlug = (slug) => {
-  if (typeof slug !== "string") return "";
-  return slug.trim().toLowerCase();
+const generateSlug = (nameEn) => {
+  return slugify(nameEn || "", {
+    lower: true,
+    strict: true,
+    trim: true,
+  });
 };
 
 export const peopleService = {
-  async getAllPeople(query = {}) {
-    const { items, totalItems, page, limit } =
-      await peopleRepository.findAll(query);
-
+  async getAllPeople(queryParams) {
+    const { items, pagination } = await peopleRepository.findAll(queryParams);
     return {
-      data: items.map(toPersonDetailsDto).filter(Boolean),
-      pagination: buildPaginationMeta(totalItems, page, limit),
+      data: items.map(toPersonDetailsDto),
+      pagination,
     };
   },
 
-  async getPersonBySlug(slug, query = {}) {
-    const normalizedSlug = normalizeSlug(slug);
-
-    if (!normalizedSlug) {
-      throw new BadRequestError(
-        "Person slug is required and must be a valid string",
-      );
-    }
-
-    const person = await peopleRepository.findBySlug(normalizedSlug);
-
+  async getPersonBySlug(slug) {
+    const person = await peopleRepository.findBySlug(slug);
     if (!person) {
-      throw new NotFoundError(`Person with slug '${normalizedSlug}' not found`);
+      throw new NotFoundError(`Person with slug '${slug}' was not found.`);
     }
 
-    const filmography = await mediaService.getFilmographyByPersonId(
-      person._id,
-      query,
+    // واکشی کارنامه هنری فرد از مدیاها
+    const mediaList = await Media.find({
+      $or: [
+        { "credits.cast.person": person._id },
+        { "credits.crew.person": person._id },
+      ],
+    })
+      .sort({ releaseYear: -1, _id: -1 })
+      .lean();
+
+    const filmography = mediaList.map((m) =>
+      toFilmographyItemDto(m, person._id),
     );
 
     return {
-      person: toPersonDetailsDto(person),
+      ...toPersonDetailsDto(person),
       filmography,
     };
   },
 
   async createPerson(payload) {
-    const slug = normalizeSlug(payload.slug);
-    if (!slug) {
-      throw new BadRequestError("Valid slug is required");
+    if (payload.imdbId) {
+      const existingImdb = await peopleRepository.findByImdbId(payload.imdbId);
+      if (existingImdb) {
+        throw new ConflictError(
+          `Person with imdbId '${payload.imdbId}' already exists.`,
+        );
+      }
     }
 
-    const existingPerson = await peopleRepository.findBySlug(slug);
-    if (existingPerson) {
-      throw new ConflictError(`Person with slug '${slug}' already exists`);
+    let slug = payload.slug || generateSlug(payload.name?.en);
+    const existingSlug = await peopleRepository.findBySlug(slug);
+    if (existingSlug) {
+      slug = `${slug}-${Date.now()}`;
     }
 
-    const newPerson = await peopleRepository.create({
+    if (payload.personalRelationships) {
+      payload.personalRelationships = normalizePersonalRelationships(
+        payload.personalRelationships,
+      );
+    }
+
+    if (Array.isArray(payload.images)) {
+      payload.images = payload.images.slice(0, 5);
+    }
+
+    const created = await peopleRepository.create({
       ...payload,
       slug,
     });
 
-    return toPersonDetailsDto(newPerson);
+    return toPersonDetailsDto(created);
   },
 
   async updatePerson(id, payload) {
-    if (!id) throw new BadRequestError("Person ID is required");
+    const person = await peopleRepository.findById(id);
+    if (!person) {
+      throw new NotFoundError(`Person with id '${id}' was not found.`);
+    }
 
-    if (payload.slug) {
-      payload.slug = normalizeSlug(payload.slug);
-      const existingPerson = await peopleRepository.findBySlug(payload.slug);
-      if (existingPerson && String(existingPerson._id) !== String(id)) {
-        throw new ConflictError(`Slug '${payload.slug}' is already taken`);
+    if (payload.imdbId && payload.imdbId !== person.imdbId) {
+      const existingImdb = await peopleRepository.findByImdbId(payload.imdbId);
+      if (existingImdb && String(existingImdb._id) !== String(id)) {
+        throw new ConflictError(
+          `Person with imdbId '${payload.imdbId}' already exists.`,
+        );
       }
     }
 
-    let oldAvatar = null;
-
-    if (payload.avatar) {
-      const currentPerson = await peopleRepository.findById(id);
-      if (currentPerson) oldAvatar = currentPerson.avatar;
+    if (payload.name?.en && !payload.slug) {
+      const nextSlug = generateSlug(payload.name.en);
+      const existingSlug = await peopleRepository.findBySlug(nextSlug);
+      if (existingSlug && String(existingSlug._id) !== String(id)) {
+        payload.slug = `${nextSlug}-${Date.now()}`;
+      } else {
+        payload.slug = nextSlug;
+      }
     }
 
-    const updatedPerson = await peopleRepository.updateById(id, payload);
-    if (!updatedPerson) {
-      throw new NotFoundError(`Person with id '${id}' not found`);
+    if (payload.avatar && person.avatar && payload.avatar !== person.avatar) {
+      await removeFileSafely(person.avatar);
     }
 
-    if (oldAvatar && payload.avatar && oldAvatar !== payload.avatar) {
-      await removeFileSafely(oldAvatar);
+    if (payload.personalRelationships) {
+      payload.personalRelationships = normalizePersonalRelationships(
+        payload.personalRelationships,
+      );
     }
 
-    return toPersonDetailsDto(updatedPerson);
+    if (Array.isArray(payload.images)) {
+      payload.images = payload.images.slice(0, 5);
+    }
+
+    const updated = await peopleRepository.updateById(id, payload);
+    return toPersonDetailsDto(updated);
   },
 
   async deletePerson(id) {
-    if (!id) throw new BadRequestError("Person ID is required");
-
-    const deletedPerson = await peopleRepository.deleteById(id);
-    if (!deletedPerson) {
-      throw new NotFoundError(`Person with id '${id}' not found`);
+    const person = await peopleRepository.findById(id);
+    if (!person) {
+      throw new NotFoundError(`Person with id '${id}' was not found.`);
     }
 
-    if (deletedPerson.avatar) {
-      await removeFileSafely(deletedPerson.avatar);
+    if (person.avatar) {
+      await removeFileSafely(person.avatar);
     }
 
-    return { id };
+    await peopleRepository.deleteById(id);
+    return { id, message: "Person deleted successfully." };
   },
 };

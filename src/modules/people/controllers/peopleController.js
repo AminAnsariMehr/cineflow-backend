@@ -1,23 +1,7 @@
 import { peopleService } from "../services/peopleService.js";
 import { BadRequestError } from "#shared/errors/AppError.js";
 import { removeFileSafely } from "#shared/utils/file.util.js";
-
-// const parseMultipartBody = (body) => {
-//   const payload = { ...body };
-//   const jsonFields = ["name", "biography", "birthPlace", "primaryProfessions"];
-
-//   for (const field of jsonFields) {
-//     if (typeof payload[field] === "string") {
-//       try {
-//         payload[field] = JSON.parse(payload[field]);
-//       } catch {
-//         // اگر فرمت جیسون نبود (مثلاً استرینگ ساده بود)، دست‌نخورده باقی می‌ماند
-//       }
-//     }
-//   }
-
-//   return payload;
-// };
+import { normalizePersonalRelationships } from "../utils/relationship.util.js";
 
 const safeJsonParse = (value, fieldName) => {
   if (value == null) return undefined;
@@ -36,20 +20,50 @@ const safeJsonParse = (value, fieldName) => {
 const parseMultipartBody = (body) => {
   const payload = { ...body };
 
-  payload.name = safeJsonParse(payload.name, "name") ?? payload.name;
-  payload.biography =
-    safeJsonParse(payload.biography, "biography") ?? payload.biography;
-  payload.birthPlace =
-    safeJsonParse(payload.birthPlace, "birthPlace") ?? payload.birthPlace;
-  payload.primaryProfessions =
-    safeJsonParse(payload.primaryProfessions, "primaryProfessions") ??
-    payload.primaryProfessions;
+  const jsonFields = [
+    "name",
+    "biography",
+    "birthPlace",
+    "primaryProfessions",
+    "awardsSummary",
+    "personalRelationships",
+    "images",
+  ];
+
+  for (const field of jsonFields) {
+    if (payload[field] !== undefined) {
+      payload[field] = safeJsonParse(payload[field], field) ?? payload[field];
+    }
+  }
+
+  if (payload.images !== undefined) {
+    if (!Array.isArray(payload.images)) {
+      throw new BadRequestError("'images' must be an array of strings.");
+    }
+    if (payload.images.length > 5) {
+      throw new BadRequestError("The images gallery cannot exceed 5 items.");
+    }
+  }
+
+  if (payload.personalRelationships !== undefined) {
+    payload.personalRelationships = normalizePersonalRelationships(
+      payload.personalRelationships,
+    );
+  }
 
   if (payload.birthDate === "" || payload.birthDate === "null") {
     payload.birthDate = null;
   }
   if (payload.deathDate === "" || payload.deathDate === "null") {
     payload.deathDate = null;
+  }
+
+  if (payload.height !== undefined && payload.height !== "") {
+    payload.height = payload.height === "null" ? null : Number(payload.height);
+  }
+  if (payload.starmeterRank !== undefined && payload.starmeterRank !== "") {
+    payload.starmeterRank =
+      payload.starmeterRank === "null" ? null : Number(payload.starmeterRank);
   }
 
   return payload;
@@ -67,10 +81,7 @@ export const peopleController = {
 
   async getPersonBySlug(req, res, next) {
     try {
-      const data = await peopleService.getPersonBySlug(
-        req.params.slug,
-        req.query,
-      );
+      const data = await peopleService.getPersonBySlug(req.params.slug);
       return res.status(200).json({ success: true, data });
     } catch (error) {
       return next(error);
@@ -88,7 +99,6 @@ export const peopleController = {
       const data = await peopleService.createPerson(payload);
       return res.status(201).json({ success: true, data });
     } catch (error) {
-      // در صورت بروز هرگونه خطا، فایل ذخیره شده موقت پاک می‌شود تا سرور زباله‌دانی نشود
       if (req.file) {
         await removeFileSafely(`/uploads/avatars/${req.file.filename}`);
       }

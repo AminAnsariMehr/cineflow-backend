@@ -1,27 +1,55 @@
 import { getEntityId, toPlainObject } from "#shared/mongoose/entityId.js";
+import { normalizeRelationshipType } from "../utils/relationship.util.js";
 
 export const toPersonDetailsDto = (personDoc) => {
   const person = toPlainObject(personDoc);
   if (!person) return null;
 
   return {
-    id: getEntityId(person),
-    slug: person.slug,
-    name: person.name,
-    biography: person.biography ?? {
-      fa: "",
-      en: "",
+    imdbId: person.imdbId ?? "",
+    slug: person.slug ?? "",
+    name: {
+      en: person.name?.en ?? "",
+      fa: person.name?.fa ?? "",
     },
+    birthName: person.birthName ?? null,
     birthDate: person.birthDate ?? null,
     deathDate: person.deathDate ?? null,
-    birthPlace: person.birthPlace ?? {
-      fa: "",
-      en: "",
+    birthPlace: {
+      en: person.birthPlace?.en ?? "",
+      fa: person.birthPlace?.fa ?? "",
     },
-    avatar: person.avatar ?? "",
-    primaryProfessions: Array.isArray(person.primaryProfessions)
-      ? person.primaryProfessions
+    height: typeof person.height === "number" ? person.height : null,
+    biography: {
+      en: person.biography?.en ?? "",
+      fa: person.biography?.fa ?? "",
+    },
+    primaryProfessions: {
+      en: Array.isArray(person.primaryProfessions?.en)
+        ? person.primaryProfessions.en
+        : [],
+      fa: Array.isArray(person.primaryProfessions?.fa)
+        ? person.primaryProfessions.fa
+        : [],
+    },
+    starmeterRank:
+      typeof person.starmeterRank === "number" ? person.starmeterRank : null,
+    awardsSummary: {
+      oscarWins: person.awardsSummary?.oscarWins ?? 0,
+      oscarNominations: person.awardsSummary?.oscarNominations ?? 0,
+      totalWins: person.awardsSummary?.totalWins ?? 0,
+      totalNominations: person.awardsSummary?.totalNominations ?? 0,
+    },
+    personalRelationships: Array.isArray(person.personalRelationships)
+      ? person.personalRelationships.map((rel) => ({
+          type: normalizeRelationshipType(rel?.type),
+          name: rel?.name ?? "",
+          imdbId: rel?.imdbId ?? null,
+          attributes: rel?.attributes ?? null,
+        }))
       : [],
+    avatar: person.avatar ?? "",
+    images: Array.isArray(person.images) ? person.images.slice(0, 5) : [],
   };
 };
 
@@ -36,7 +64,6 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
     return castPersonId && String(castPersonId) === targetId;
   });
 
-  // جستجو در عوامل پشت صحنه (کارگردان، نویسنده، و ...)
   const matchedCrew = media.credits?.crew?.filter((crewMember) => {
     const crewPersonId = crewMember?.person?._id ?? crewMember?.person;
     return crewPersonId && String(crewPersonId) === targetId;

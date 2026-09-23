@@ -7,37 +7,9 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    // app.listen(env.port, () => {
-    //   console.log(`Server running on http://localhost:${env.port}`);
-    // });
-
     const server = app.listen(env.port, () => {
       console.log(`Server running on http://localhost:${env.port}`);
     });
-
-    // const shutdown = async (signal) => {
-    //   console.log(`${signal} received. Shutting down server...`);
-
-    //   server.close(async (serverError) => {
-
-    //    if (serverError) {
-    //       console.error("Error while closing HTTP server:", serverError);
-    //       process.exit(1);
-    //     }
-
-    //     try {
-    //       await import("mongoose").then(({ default: mongoose }) =>
-    //         mongoose.connection.close(),
-    //       );
-
-    //       console.log("Server closed successfully");
-    //       process.exit(0);
-    //     } catch (error) {
-    //       console.error("Error while closing server:", error);
-    //       process.exit(1);
-    //     }
-    //   });
-    // };
 
     const shutdown = (signal) => {
       console.log(`${signal} received. Shutting down server...`);
