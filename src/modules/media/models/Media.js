@@ -4,10 +4,46 @@ const cleanMediaTransform = (_, ret) => {
   delete ret.__v;
 
   if (ret.type === "movie") delete ret.seriesDetails;
-  if (ret.type === "series") delete ret.duration;
+
+  if (ret.type === "series") {
+    delete ret.duration;
+    delete ret.sources;
+  }
 
   return ret;
 };
+
+const localizedStringSchema = new mongoose.Schema(
+  {
+    fa: { type: String, trim: true, default: "" },
+    en: { type: String, trim: true, default: "" },
+  },
+  { _id: false, autoIndex: false },
+);
+
+const localizedStringRequiredSchema = new mongoose.Schema(
+  {
+    fa: {
+      type: String,
+      trim: true,
+      required: [true, "Persian title is required"],
+    },
+    en: {
+      type: String,
+      trim: true,
+      required: [true, "English title is required"],
+    },
+  },
+  { _id: false, autoIndex: false },
+);
+
+const localizedStringArraySchema = new mongoose.Schema(
+  {
+    en: { type: [{ type: String, trim: true }], default: [] },
+    fa: { type: [{ type: String, trim: true }], default: [] },
+  },
+  { _id: false, autoIndex: false },
+);
 
 const posterSchema = new mongoose.Schema(
   {
@@ -18,58 +54,51 @@ const posterSchema = new mongoose.Schema(
   { _id: false, autoIndex: false },
 );
 
-const trailerSchema = new mongoose.Schema(
+const assetsSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    url: {
-      type: String,
-      required: true,
-      trim: true,
-      validate: {
-        validator: (value) => /^https?:\/\/\S+$/i.test(value),
-        message: "Trailer URL must be a valid HTTP or HTTPS URL",
-      },
-    },
-    quality: {
-      type: String,
-      enum: ["360p", "480p", "720p", "1080p", "1440p", "2160p"],
-      default: "1080p",
-      trim: true,
-    },
+    poster: { type: posterSchema, required: true },
+    gallery: { type: [{ type: String, trim: true }], default: [] },
+    trailers: { type: [{ type: String, trim: true }], default: [] },
   },
   { _id: false, autoIndex: false },
 );
 
-const assetsSchema = new mongoose.Schema(
+const creditPersonSchema = new mongoose.Schema(
   {
-    poster: { type: posterSchema, required: true },
-    gallery: {
-      type: [{ type: String, trim: true }],
-      default: [],
+    personIMDbId: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [
+        /^nm\d+$/,
+        "Invalid person IMDb ID format (expected nm followed by digits)",
+      ],
     },
-    trailers: {
-      type: [trailerSchema],
-      default: [],
-    },
+    en: { type: String, trim: true, default: "" },
+    fa: { type: String, trim: true, default: "" },
   },
   { _id: false, autoIndex: false },
 );
 
 const castSchema = new mongoose.Schema(
   {
-    person: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Person",
+    personIMDbId: {
+      type: String,
       required: true,
+      trim: true,
+      match: [
+        /^nm\d+$/,
+        "Invalid cast person IMDb ID format (expected nm followed by digits)",
+      ],
     },
     character: {
-      fa: { type: String, trim: true, default: "" },
-      en: { type: String, trim: true, default: "" },
+      type: localizedStringSchema,
+      default: () => ({ fa: "", en: "" }),
     },
     order: {
       type: Number,
       required: true,
-      min: 1,
+      min: 0,
       validate: {
         validator: Number.isInteger,
         message: "Cast order must be an integer",
@@ -79,59 +108,45 @@ const castSchema = new mongoose.Schema(
   { _id: false, autoIndex: false },
 );
 
-const localizedStringSchema = new mongoose.Schema(
+const seriesDetailsSchema = new mongoose.Schema(
   {
-    fa: { type: String, trim: true, default: "" },
-    en: { type: String, trim: true, default: "" },
+    seasonsCount: {
+      type: Number,
+      min: 0,
+      default: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "seasonsCount must be an integer",
+      },
+    },
+    endYear: {
+      type: Number,
+      default: null,
+      validate: {
+        validator: (v) => v === null || (Number.isInteger(v) && v >= 1888),
+        message: "endYear must be a valid integer year >= 1888 or null",
+      },
+    },
+    status: {
+      type: localizedStringSchema,
+      default: () => ({ fa: "", en: "" }),
+    },
   },
-  { _id: false },
+  { _id: false, autoIndex: false },
 );
 
-const crewMemberSchema = new mongoose.Schema(
+const mediaSourceSchema = new mongoose.Schema(
   {
-    name: {
-      type: localizedStringSchema,
+    quality: {
+      type: String,
       required: true,
+      enum: ["480p", "720p", "1080p", "1440p", "2160p"],
+      trim: true,
     },
-    role: {
+    url: {
       type: String,
       required: true,
       trim: true,
-      // مثلا: composer, producer, cinematographer, editor
-    },
-  },
-  { _id: false, autoIndex: false },
-);
-
-const seriesDetailsSchema = new mongoose.Schema(
-  {
-    seasonsCount: { type: Number, min: 0, default: 0 },
-    totalEpisodes: { type: Number, min: 0, default: 0 },
-    episodeDuration: { type: Number, min: 0, default: null },
-    status: {
-      type: String,
-      enum: ["ongoing", "completed", "renewed", "canceled"],
-      default: "ongoing",
-    },
-  },
-  { _id: false, autoIndex: false },
-);
-
-const mediaCollectionItemSchema = new mongoose.Schema(
-  {
-    collectionRef: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Collection",
-      required: true,
-    },
-    order: {
-      type: Number,
-      required: true,
-      min: 1,
-      validate: {
-        validator: Number.isInteger,
-        message: "Collection order must be an integer",
-      },
     },
   },
   { _id: false, autoIndex: false },
@@ -139,6 +154,15 @@ const mediaCollectionItemSchema = new mongoose.Schema(
 
 const mediaSchema = new mongoose.Schema(
   {
+    imdbId: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [
+        /^tt\d+$/,
+        "Invalid media IMDb ID format (expected tt followed by digits)",
+      ],
+    },
     slug: {
       type: String,
       required: true,
@@ -151,131 +175,69 @@ const mediaSchema = new mongoose.Schema(
       enum: ["movie", "series"],
     },
     title: {
-      fa: { type: String, required: true, trim: true },
-      en: { type: String, required: true, trim: true },
+      type: localizedStringRequiredSchema,
+      required: true,
     },
-    originalTitle: { type: String, trim: true },
     summary: {
-      fa: { type: String, required: true, trim: true },
-      en: { type: String, default: "", trim: true },
+      type: localizedStringSchema,
+      default: () => ({ fa: "", en: "" }),
     },
     releaseYear: {
       type: Number,
       required: true,
       min: 1888,
       validate: {
-        validator: (value) => value <= new Date().getFullYear() + 20,
-        message: "releaseYear is too far in the future",
+        validator: (value) =>
+          Number.isInteger(value) && value <= new Date().getFullYear() + 20,
+        message: "releaseYear must be a valid integer year",
       },
     },
     ageRating: {
       type: String,
-      enum: [
-        "+3",
-        "+7",
-        "+12",
-        "+15",
-        "+17",
-        "+18",
-        "G",
-        "PG",
-        "PG-13",
-        "R",
-        "NC-17",
-        "TV-MA",
-        "TV-14",
-        "TV-PG",
-      ],
-      default: null,
+      default: "",
+      trim: true,
     },
+
     duration: {
       type: Number,
-      min: 0,
-      default: null,
+      default: undefined,
+      required: [
+        function () {
+          return this.type === "movie";
+        },
+        "Duration is required for movies",
+      ],
       validate: {
         validator: function (value) {
-          if (this.type === "movie" && (value == null || value <= 0)) {
-            return false;
+          if (this.type === "movie") {
+            return Number.isInteger(value) && value > 0;
           }
           return true;
         },
-        message: "Duration is required for movies and must be greater than 0",
+        message: "Duration must be a positive integer representing minutes",
       },
     },
-    genres: [
-      {
-        type: String,
-        trim: true,
-        enum: [
-          "Action",
-          "Adventure",
-          "Animation",
-          "Biography",
-          "Comedy",
-          "Crime",
-          "Drama",
-          "Fantasy",
-          "Film Noir",
-          "History",
-          "Horror",
-          "Mystery",
-          "Musical",
-          "Romance",
-          "Superhero",
-          "Thriller",
-          "Sci-Fi",
-          "War",
-          "Western",
-        ],
-      },
-    ],
-    countries: [{ type: String, trim: true }],
-    languages: [{ type: String, trim: true }],
-    hasPersianDub: { type: Boolean, default: false },
-    assets: { type: assetsSchema, required: true },
-    rating: {
-      imdb: {
-        type: Number,
-        min: 0,
-        max: 10,
-        default: null,
-        validate: {
-          validator: (value) =>
-            value == null || /^\d+(\.\d)?$/.test(String(value)),
-          message: "IMDb rating must have at most one decimal place",
-        },
-      },
-      rottenTomatoes: { type: Number, min: 0, max: 100, default: null },
-      metacritic: { type: Number, min: 0, max: 100, default: null },
-      userRating: { type: Number, min: 0, max: 5, default: 0 },
-      voteCount: {
-        type: Number,
-        min: 0,
-        default: 0,
-        validate: {
-          validator: Number.isInteger,
-          message: "voteCount must be an integer",
-        },
-      },
+
+    genres: {
+      type: localizedStringArraySchema,
+      default: () => ({ en: [], fa: [] }),
     },
-    credits: {
-      directors: [localizedStringSchema],
-      writers: [localizedStringSchema],
-      cast: [castSchema],
-      crew: [crewMemberSchema],
+    countries: {
+      type: localizedStringArraySchema,
+      default: () => ({ en: [], fa: [] }),
     },
-    seriesDetails: {
-      type: seriesDetailsSchema,
-      default: null,
-      validate: {
-        validator: function (value) {
-          if (this.type === "series" && !value) return false;
-          return true;
-        },
-        message: "seriesDetails is required for series type.",
-      },
+    languages: {
+      type: localizedStringArraySchema,
+      default: () => ({ en: [], fa: [] }),
     },
-    collections: [mediaCollectionItemSchema],
+    hasPersianDub: {
+      type: Boolean,
+      default: false,
+    },
+    collections: {
+      type: [{ type: String, trim: true }],
+      default: [],
+    },
     isTop10: {
       type: Boolean,
       default: false,
@@ -287,6 +249,119 @@ const mediaSchema = new mongoose.Schema(
     isExclusive: {
       type: Boolean,
       default: false,
+    },
+    rating: {
+      imdb: {
+        type: Number,
+        min: 0,
+        max: 10,
+        default: null,
+      },
+      rottenTomatoes: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: null,
+      },
+      metacritic: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: null,
+      },
+      userRating: {
+        type: Number,
+        min: 0,
+        max: 5,
+        default: 0,
+      },
+      voteCount: {
+        type: Number,
+        min: 0,
+        default: 0,
+        validate: {
+          validator: Number.isInteger,
+          message: "voteCount must be an integer",
+        },
+      },
+    },
+    awardsSummary: {
+      oscarWins: {
+        type: Number,
+        min: 0,
+        default: 0,
+        validate: {
+          validator: Number.isInteger,
+          message: "oscarWins must be an integer",
+        },
+      },
+      oscarNominations: {
+        type: Number,
+        min: 0,
+        default: 0,
+        validate: {
+          validator: Number.isInteger,
+          message: "oscarNominations must be an integer",
+        },
+      },
+      totalWins: {
+        type: Number,
+        min: 0,
+        default: 0,
+        validate: {
+          validator: Number.isInteger,
+          message: "totalWins must be an integer",
+        },
+      },
+      totalNominations: {
+        type: Number,
+        min: 0,
+        default: 0,
+        validate: {
+          validator: Number.isInteger,
+          message: "totalNominations must be an integer",
+        },
+      },
+    },
+    credits: {
+      directors: { type: [creditPersonSchema], default: [] },
+      writers: { type: [creditPersonSchema], default: [] },
+      cast: { type: [castSchema], default: [] },
+    },
+    assets: {
+      type: assetsSchema,
+      required: true,
+    },
+
+    seriesDetails: {
+      type: seriesDetailsSchema,
+      default: undefined,
+      required: [
+        function () {
+          return this.type === "series";
+        },
+        "seriesDetails is required for series",
+      ],
+    },
+
+    sources: {
+      type: [mediaSourceSchema],
+      default: undefined,
+      required: [
+        function () {
+          return this.type === "movie";
+        },
+        "Sources array is required for movies",
+      ],
+      validate: {
+        validator: function (value) {
+          if (this.type === "movie") {
+            return Array.isArray(value) && value.length > 0;
+          }
+          return true;
+        },
+        message: "Sources array cannot be empty for movies.",
+      },
     },
   },
   {
@@ -304,93 +379,42 @@ const mediaSchema = new mongoose.Schema(
   },
 );
 
-// ۱. اسلاگ یکتا
+mediaSchema.pre("validate", function () {
+  if (this.type === "movie") {
+    this.seriesDetails = undefined;
+  } else if (this.type === "series") {
+    this.duration = undefined;
+    this.sources = undefined;
+  }
+});
+
+mediaSchema.index({ imdbId: 1 }, { unique: true, name: "uniq_imdbId" });
 mediaSchema.index({ slug: 1 }, { unique: true, name: "uniq_slug" });
 
-// ۲. سورت زمانی عمومی
-mediaSchema.index({ createdAt: -1, _id: -1 }, { name: "idx_createdAt_id" });
-
-// ۳. فیلترها و مرتب‌سازی‌های ترکیبی بر اساس ESR
 mediaSchema.index(
   { type: 1, createdAt: -1, _id: -1 },
   { name: "idx_type_createdAt_id" },
 );
 mediaSchema.index(
-  { genres: 1, createdAt: -1, _id: -1 },
-  { name: "idx_genres_createdAt_id" },
+  { type: 1, releaseYear: -1 },
+  { name: "idx_type_releaseYear" },
 );
 mediaSchema.index(
-  { type: 1, genres: 1, createdAt: -1, _id: -1 },
-  { name: "idx_type_genres_createdAt_id" },
+  { isTop10: 1, "rating.imdb": -1 },
+  { name: "idx_top10_rating" },
+);
+mediaSchema.index({ isUpcoming: 1, releaseYear: 1 }, { name: "idx_upcoming" });
+mediaSchema.index(
+  { "genres.en": 1, createdAt: -1, _id: -1 },
+  { name: "idx_genres_en_sort" },
 );
 mediaSchema.index(
-  { languages: 1, createdAt: -1, _id: -1 },
-  { name: "idx_languages_createdAt_id" },
+  { "genres.fa": 1, createdAt: -1, _id: -1 },
+  { name: "idx_genres_fa_sort" },
+);
+mediaSchema.index(
+  { "rating.imdb": -1, "rating.voteCount": -1, createdAt: -1, _id: -1 },
+  { name: "idx_top_imdb_full_sort" },
 );
 
-// ۴. ایندکس‌های فیلموگرافی و عوامل
-mediaSchema.index(
-  { "credits.directors": 1, releaseYear: -1, createdAt: -1, _id: -1 },
-  { name: "idx_credits_directors_sort" },
-);
-mediaSchema.index(
-  { "credits.writers": 1, releaseYear: -1, createdAt: -1, _id: -1 },
-  { name: "idx_credits_writers_sort" },
-);
-mediaSchema.index(
-  { "credits.cast.person": 1, releaseYear: -1, createdAt: -1, _id: -1 },
-  { name: "idx_credits_cast_person_sort" },
-);
-
-// ۵. ایندکس پارشیال Top 10
-mediaSchema.index(
-  {
-    "rating.imdb": -1,
-    "rating.voteCount": -1,
-    createdAt: -1,
-    _id: -1,
-  },
-  {
-    name: "idx_top10_partial_sort",
-    partialFilterExpression: { isTop10: true },
-  },
-);
-
-// ۶. رتبه‌بندی عمومی Top IMDb
-mediaSchema.index(
-  {
-    "rating.imdb": -1,
-    "rating.voteCount": -1,
-    createdAt: -1,
-    _id: -1,
-  },
-  {
-    name: "idx_top_imdb_full_sort",
-  },
-);
-
-// ۷. فیلم‌های آینده (Upcoming) با فیلتر پارشیال
-mediaSchema.index(
-  { releaseYear: 1, createdAt: -1, _id: -1 },
-  {
-    name: "idx_upcoming_releaseYear_createdAt_id",
-    partialFilterExpression: { isUpcoming: true },
-  },
-);
-
-// ۸. مجموعه‌ها و چندگانه‌ها
-mediaSchema.index(
-  { "collections.collectionRef": 1, "collections.order": 1, _id: 1 },
-  { name: "idx_collection_order_id" },
-);
-
-// ۹. آثار دوبله فارسی با فیلتر پارشیال و سورت زمانی
-mediaSchema.index(
-  { createdAt: -1, _id: -1 },
-  {
-    name: "idx_hasPersianDub_createdAt_id",
-    partialFilterExpression: { hasPersianDub: true },
-  },
-);
-
-export const Media = mongoose.model("Media", mediaSchema);
+export const Media = mongoose.model("Media", mediaSchema, "media");
