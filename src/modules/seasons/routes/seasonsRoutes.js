@@ -3,8 +3,18 @@ import { seasonsController } from "../controllers/seasonsController.js";
 
 const router = Router();
 
-router.get("/:imdbId", seasonsController.getSeasons);
+router.get("/media/:mediaImdbId", seasonsController.getSeasonsByMedia);
 
-router.get("/:imdbId/:seasonNumber", seasonsController.getSeasonDetails);
+router.get(
+  "/media/:mediaImdbId/:seasonNumber",
+  seasonsController.getSeasonByNumber,
+);
+
+router.get(
+  "/media/:mediaImdbId/:seasonNumber/episodes/:episodeNumber",
+  seasonsController.getEpisode,
+);
+
+router.get("/:id", seasonsController.getSeasonById);
 
 export default router;

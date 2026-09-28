@@ -1,20 +1,51 @@
 import { seasonsService } from "../services/seasonsService.js";
 
 export const seasonsController = {
-  async getSeasons(req, res, next) {
+  async getSeasonsByMedia(req, res, next) {
     try {
-      const { imdbId } = req.params;
-      const data = await seasonsService.getSeasonsByMedia(imdbId);
+      const { mediaImdbId } = req.params;
+      const includeEpisodes = req.query.includeEpisodes === "true";
+      const data = await seasonsService.getSeasonsByMediaImdbId(
+        mediaImdbId,
+        includeEpisodes,
+      );
       res.json({ success: true, data });
     } catch (error) {
       next(error);
     }
   },
 
-  async getSeasonDetails(req, res, next) {
+  async getSeasonByNumber(req, res, next) {
     try {
-      const { imdbId, seasonNumber } = req.params;
-      const data = await seasonsService.getSeasonDetails(imdbId, seasonNumber);
+      const { mediaImdbId, seasonNumber } = req.params;
+      const data = await seasonsService.getSeasonByNumber(
+        mediaImdbId,
+        seasonNumber,
+      );
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getSeasonById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const data = await seasonsService.getSeasonById(id);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getEpisode(req, res, next) {
+    try {
+      const { mediaImdbId, seasonNumber, episodeNumber } = req.params;
+      const data = await seasonsService.getEpisode(
+        mediaImdbId,
+        seasonNumber,
+        episodeNumber,
+      );
       res.json({ success: true, data });
     } catch (error) {
       next(error);

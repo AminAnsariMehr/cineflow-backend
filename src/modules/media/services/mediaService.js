@@ -11,6 +11,10 @@ import {
 import { toMediaListDto, toMediaDetailsDto } from "../mappers/mediaMapper.js";
 import { toFilmographyItemDto } from "../../people/mappers/peopleMapper.js";
 
+import { isValidObjectId } from "#shared/utils/objectId.util.js";
+import { peopleRepository } from "#modules/people/repositories/peopleRepository.js";
+import { collectionRepository } from "#modules/collections/repositories/collectionRepository.js";
+
 const safeMap = (items, mapper) => {
   if (!Array.isArray(items)) return [];
   return items.map(mapper).filter(Boolean);
@@ -27,9 +31,7 @@ const extractId = (value) => {
     return value;
   }
 
-  if (typeof value === "object") {
-    return value._id ?? value.id ?? null;
-  }
+  if (typeof value === "object") return value._id ?? value.id ?? null;
 
   return null;
 };
@@ -84,7 +86,7 @@ async function validateReferences(payload) {
 export const mediaService = {
   async getAllMedia(query = {}) {
     const items = await mediaRepository.findAll(normalizeQueryObject(query));
-    return safeMap(items, toMediaListDto);
+    return formatPaginatedResult(result, toMediaListDto);
   },
 
   async getMediaBySlug(slug) {
