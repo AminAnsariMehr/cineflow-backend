@@ -16,6 +16,8 @@ import {
 // ----------------------- Module ------------------------
 import { mediaModule } from "./modules/media/media.module.js";
 import { peopleModule } from "./modules/people/people.module.js";
+// import { collectionModule } from "./modules/collections/collections.module";
+import { seasonsModule } from "./modules/seasons/seasons.module.js";
 
 const app = express();
 
@@ -74,6 +76,7 @@ app.get("/health", (req, res) => {
 // -------- Module Registration ----------
 mediaModule(app);
 peopleModule(app);
+seasonsModule(app);
 
 // ------ Middleware Registration --------
 app.use(notFoundHandler);

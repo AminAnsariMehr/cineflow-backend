@@ -1,0 +1,11 @@
+// FILE: src/modules/seasons/controllers/seasonsController.js
+// FILE: src/modules/seasons/mappers/seasonsMapper.js
+// FILE: src/modules/seasons/models/Seasons.js
+// FILE: src/modules/seasons/repositories/seasonsRepository.js
+// FILE: src/modules/seasons/routes/seasonsRoutes.js
+// FILE: src/modules/seasons/seasons.module.js
+// FILE: src/modules/seasons/services/seasonsService.js
+
+
+
+
