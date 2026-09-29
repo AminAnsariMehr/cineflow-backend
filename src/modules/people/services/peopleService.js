@@ -26,10 +26,12 @@ export const peopleService = {
     };
   },
 
-  async getPersonBySlug(slug) {
-    const person = await peopleRepository.findBySlug(slug);
+  async getPersonBySlug(slugOrIdentifier) {
+    const person = await peopleRepository.findByIdentifier(slugOrIdentifier);
     if (!person) {
-      throw new NotFoundError(`Person with slug '${slug}' was not found.`);
+      throw new NotFoundError(
+        `Person with identifier '${slugOrIdentifier}' was not found.`,
+      );
     }
 
     // واکشی کارنامه هنری فرد از مدیاها

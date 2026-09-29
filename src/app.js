@@ -45,7 +45,7 @@ app.use(
   }),
 );
 
-app.use(express.static(path.resolve("public")));
+app.use("/uploads", express.static(path.resolve("public/uploads")));
 
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 

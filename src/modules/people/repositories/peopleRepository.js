@@ -46,29 +46,80 @@ export const peopleRepository = {
     return Person.findOne({ imdbId }, projection).lean();
   },
 
+  async findByIdentifier(identifier, projection = DEFAULT_PERSON_PROJECTION) {
+    if (!identifier) return null;
+    const cleanId = String(identifier).trim();
+
+    // ۱. بررسی فرمت IMDb ID (معمولاً با nm شروع می‌شود)
+    if (/^nm\d+$/i.test(cleanId)) {
+      const byImdb = await Person.findOne(
+        { imdbId: cleanId },
+        projection,
+      ).lean();
+      if (byImdb) return byImdb;
+    }
+
+    // ۲. بررسی شناسه MongoDB ObjectId
+    if (mongoose.isValidObjectId(cleanId)) {
+      const byId = await Person.findById(cleanId, projection).lean();
+      if (byId) return byId;
+    }
+
+    // ۳. پیش‌فرض جستجو بر اساس slug
+    return Person.findOne({ slug: cleanId.toLowerCase() }, projection).lean();
+  },
+
   async findAll(queryParams = {}, projection = DEFAULT_PERSON_PROJECTION) {
     const { page, limit, skip } = normalizePagination(queryParams);
-    const filter = {};
+    const matchFilter = {};
+    const isSearch = Boolean(queryParams.search);
 
-    if (queryParams.search) {
-      filter.$text = { $search: queryParams.search };
+    if (isSearch) {
+      matchFilter.$text = { $search: queryParams.search };
     }
 
     if (queryParams.profession) {
-      filter.$or = [
+      matchFilter.$or = [
         { "primaryProfessions.en": queryParams.profession },
         { "primaryProfessions.fa": queryParams.profession },
       ];
     }
 
-    const [items, total] = await Promise.all([
-      Person.find(filter, projection)
-        .sort({ starmeterRank: 1, _id: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Person.countDocuments(filter),
-    ]);
+    const pipeline = [
+      { $match: matchFilter },
+      {
+        $addFields: {
+          hasRank: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ["$starmeterRank", null] },
+                  { $gt: ["$starmeterRank", 0] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+          ...(isSearch ? { score: { $meta: "textScore" } } : {}),
+        },
+      },
+      {
+        $sort: isSearch
+          ? { score: { $meta: "textScore" }, hasRank: -1, starmeterRank: 1 }
+          : { hasRank: -1, starmeterRank: 1, _id: -1 },
+      },
+      {
+        $facet: {
+          items: [{ $skip: skip }, { $limit: limit }, { $project: projection }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const [result] = await Person.aggregate(pipeline).allowDiskUse(true);
+    const items = result?.items ?? [];
+    const total = result?.totalCount?.[0]?.count ?? 0;
 
     return {
       items,

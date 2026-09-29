@@ -1,6 +1,6 @@
-import { MediaCollection } from "#modules/media/models/Collection";
+import { MediaCollection } from "#modules/collections/models/Collection.js";
 import { normalizePagination } from "#shared/utils/pagination.util.js";
-import { COLLECTION_SUMMARY_PROJECTION } from "#modules/media/repositories/media.projections";
+import { COLLECTION_SUMMARY_PROJECTION } from "#modules/media/repositories/media.projections.js";
 
 export const collectionRepository = {
   async create(data) {
