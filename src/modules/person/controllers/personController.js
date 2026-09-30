@@ -5,7 +5,7 @@ import { normalizePersonalRelationships } from "../utils/relationship.util.js";
 import { mediaService } from "../../media/services/mediaService.js";
 
 const safeJsonParse = (value, fieldName) => {
-  if (value == null) return undefined;
+  if (value === undefined || value === null) return undefined;
   if (typeof value !== "string") return value;
 
   const trimmed = value.trim();
@@ -14,17 +14,19 @@ const safeJsonParse = (value, fieldName) => {
   try {
     return JSON.parse(trimmed);
   } catch {
-    throw new BadRequestError(`Invalid JSON for field '${fieldName}'`);
+    throw new BadRequestError(`Invalid JSON format for field '${fieldName}'`);
   }
 };
 
-const parseNumericField = (value, fieldName) => {
+const parseNumericField = (value, fieldName, isInteger = false) => {
   if (value === undefined || value === "") return undefined;
   if (value === null || value === "null") return null;
 
   const parsed = Number(value);
-  if (Number.isNaN(parsed)) {
-    throw new BadRequestError(`Field '${fieldName}' must be a valid number.`);
+  if (Number.isNaN(parsed) || (isInteger && !Number.isInteger(parsed))) {
+    throw new BadRequestError(
+      `Field '${fieldName}' must be a valid ${isInteger ? "integer" : "number"}.`,
+    );
   }
   return parsed;
 };
@@ -43,8 +45,11 @@ const parseMultipartBody = (body) => {
   ];
 
   for (const field of jsonFields) {
-    if (payload[field] !== undefined) {
-      payload[field] = safeJsonParse(payload[field], field) ?? payload[field];
+    if (field in payload) {
+      const parsed = safeJsonParse(payload[field], field);
+      if (parsed !== undefined) {
+        payload[field] = parsed;
+      }
     }
   }
 
@@ -63,18 +68,29 @@ const parseMultipartBody = (body) => {
     );
   }
 
-  if (payload.birthDate === "" || payload.birthDate === "null") {
-    payload.birthDate = null;
+  if ("birthDate" in payload) {
+    payload.birthDate =
+      payload.birthDate === "" || payload.birthDate === "null"
+        ? null
+        : String(payload.birthDate).trim();
   }
-  if (payload.deathDate === "" || payload.deathDate === "null") {
-    payload.deathDate = null;
+  if ("deathDate" in payload) {
+    payload.deathDate =
+      payload.deathDate === "" || payload.deathDate === "null"
+        ? null
+        : String(payload.deathDate).trim();
   }
 
-  payload.height = parseNumericField(payload.height, "height");
-  payload.starmeterRank = parseNumericField(
-    payload.starmeterRank,
-    "starmeterRank",
-  );
+  if ("height" in payload) {
+    payload.height = parseNumericField(payload.height, "height");
+  }
+  if ("starmeterRank" in payload) {
+    payload.starmeterRank = parseNumericField(
+      payload.starmeterRank,
+      "starmeterRank",
+      true,
+    );
+  }
 
   return payload;
 };

@@ -4,6 +4,23 @@ import {
   normalizeRelationshipType,
 } from "../utils/relationship.util.js";
 
+const isValidCalendarDate = (dateStr) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+};
+
+const dateValidator = {
+  validator: (v) =>
+    v === null || v === undefined || v === "" || isValidCalendarDate(v),
+  message: "Date must be a valid calendar date in YYYY-MM-DD format",
+};
+
 const localizedStringSchema = new mongoose.Schema(
   {
     en: { type: String, default: "", trim: true },
@@ -56,17 +73,16 @@ const personalRelationshipSchema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true,
-      match: [/^$|^nm\d+$/i, "Invalid IMDb ID for relationship"],
+      lowercase: true,
+      validate: {
+        validator: (v) => v === null || v === "" || /^nm\d+$/i.test(v),
+        message: "Invalid IMDb ID for relationship",
+      },
     },
     attributes: { type: String, default: null, trim: true },
   },
   { _id: false },
 );
-
-const dateValidator = {
-  validator: (v) => v == null || v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v),
-  message: "Date must be in YYYY-MM-DD format",
-};
 
 const personSchema = new mongoose.Schema(
   {
@@ -74,8 +90,9 @@ const personSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
       match: [
-        /^nm\d+$/i,
+        /^nm\d+$/,
         "Invalid person IMDb ID format (expected 'nm' followed by digits)",
       ],
     },
@@ -97,11 +114,13 @@ const personSchema = new mongoose.Schema(
     birthDate: {
       type: String,
       default: null,
+      set: (v) => (!v ? null : v),
       validate: dateValidator,
     },
     deathDate: {
       type: String,
       default: null,
+      set: (v) => (!v ? null : v),
       validate: dateValidator,
     },
     birthPlace: {
@@ -145,12 +164,7 @@ const personSchema = new mongoose.Schema(
       trim: true,
     },
     images: {
-      type: [
-        {
-          type: String,
-          trim: true,
-        },
-      ],
+      type: [{ type: String, trim: true }],
       validate: [
         (val) => !Array.isArray(val) || val.length <= 5,
         "The images gallery cannot exceed 5 items.",
@@ -168,27 +182,30 @@ const personSchema = new mongoose.Schema(
 personSchema.index({ imdbId: 1 }, { unique: true, name: "idx_person_imdb_id" });
 personSchema.index({ slug: 1 }, { unique: true, name: "idx_person_slug" });
 
-// Index for Pagination & Default Sorting (High-performance B-Tree Index)
+// Sort & Pagination Index (Compound with _id for deterministic B-Tree sort)
 personSchema.index(
   { starmeterRank: 1, _id: -1 },
   { name: "idx_person_starmeter_id" },
 );
 
-personSchema.index({ "name.en": 1, _id: 1 }, { name: "idx_person_name_en_id" });
-personSchema.index({ "name.fa": 1, _id: 1 }, { name: "idx_person_name_fa_id" });
+// Compound indexes covering filter + sort criteria
 personSchema.index(
-  { "primaryProfessions.en": 1, starmeterRank: 1 },
-  { name: "idx_person_prof_en_rank" },
+  { "primaryProfessions.en": 1, starmeterRank: 1, _id: -1 },
+  { name: "idx_person_prof_en_rank_id" },
 );
 personSchema.index(
-  { "primaryProfessions.fa": 1, starmeterRank: 1 },
-  { name: "idx_person_prof_fa_rank" },
+  { "primaryProfessions.fa": 1, starmeterRank: 1, _id: -1 },
+  { name: "idx_person_prof_fa_rank_id" },
 );
 
-// Full-text search
+// Full-text search with language none (prevents English stemmer from ruining Persian text)
 personSchema.index(
   { "name.en": "text", "name.fa": "text" },
-  { weights: { "name.en": 2, "name.fa": 1 }, name: "idx_person_name_text" },
+  {
+    weights: { "name.en": 2, "name.fa": 1 },
+    name: "idx_person_name_text",
+    default_language: "none",
+  },
 );
 
 export const Person = mongoose.model("Person", personSchema);

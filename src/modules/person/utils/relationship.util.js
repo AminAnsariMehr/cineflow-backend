@@ -60,21 +60,19 @@ export const normalizePersonalRelationships = (value) => {
   return value
     .filter((r) => r && typeof r === "object")
     .map((r) => {
-      const type = normalizeRelationshipType(r.type);
       const name = typeof r.name === "string" ? r.name.trim() : "";
       if (!name) return null;
 
-      const imdbId =
-        typeof r.imdbId === "string" && r.imdbId.trim()
-          ? r.imdbId.trim()
-          : null;
+      const rawImdb = typeof r.imdbId === "string" ? r.imdbId.trim() : "";
+      const imdbId = /^nm\d+$/i.test(rawImdb) ? rawImdb.toLowerCase() : null;
+
       const attributes =
         typeof r.attributes === "string" && r.attributes.trim()
           ? r.attributes.trim()
           : null;
 
       return {
-        type,
+        type: normalizeRelationshipType(r.type),
         name,
         imdbId,
         attributes,

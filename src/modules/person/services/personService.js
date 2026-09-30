@@ -1,10 +1,7 @@
 import slugify from "slugify";
 import { personRepository } from "../repositories/personRepository.js";
-import {
-  toPersonDetailsDto,
-  toFilmographyItemDto,
-} from "../mappers/personMapper.js";
-import { Media } from "../../media/models/Media.js";
+import { toPersonDetailsDto } from "../mappers/personMapper.js";
+import { mediaService } from "../../media/services/mediaService.js";
 import {
   NotFoundError,
   ConflictError,
@@ -14,29 +11,41 @@ import { removeFileSafely } from "#shared/utils/file.util.js";
 import { normalizePersonalRelationships } from "../utils/relationship.util.js";
 
 const generateSlug = (nameEn) => {
-  return slugify(nameEn || "", {
+  return slugify(String(nameEn || ""), {
     lower: true,
     strict: true,
     trim: true,
   });
 };
 
-const resolveUniqueSlug = async (baseSlug, currentId = null) => {
-  let slug = baseSlug || `person-${Date.now()}`;
-  let counter = 0;
+const resolveUniqueSlugOptimized = async (baseSlug, currentId = null) => {
+  const cleanBase = baseSlug || `person-${Date.now()}`;
+  const existingDocs =
+    await personRepository.findExistingSlugsByPrefix(cleanBase);
 
-  while (true) {
-    const candidate = counter === 0 ? slug : `${slug}-${counter}`;
-    const existing = await personRepository.findBySlug(candidate);
+  if (!existingDocs.length) {
+    return cleanBase;
+  }
 
-    if (
-      !existing ||
-      (currentId && String(existing._id) === String(currentId))
-    ) {
-      return candidate;
-    }
+  const currentIdStr = currentId ? String(currentId) : null;
+  const matchCurrent = existingDocs.find(
+    (doc) => String(doc._id) === currentIdStr,
+  );
+  if (matchCurrent && matchCurrent.slug === cleanBase) {
+    return cleanBase;
+  }
+
+  const existingSlugSet = new Set(existingDocs.map((d) => d.slug));
+  if (!existingSlugSet.has(cleanBase)) {
+    return cleanBase;
+  }
+
+  let counter = 1;
+  while (existingSlugSet.has(`${cleanBase}-${counter}`)) {
     counter += 1;
   }
+
+  return `${cleanBase}-${counter}`;
 };
 
 export const personService = {
@@ -56,31 +65,21 @@ export const personService = {
       );
     }
 
-    // بهینه‌سازی پرفورمنس: فچ کردن فقط فیلدهای مورد نیاز و اعمال لیمیت برای جلوگیری از سرریز حافظه
-    const mediaList = await Media.find({
-      $or: [
-        { "credits.cast.person": person._id },
-        { "credits.crew.person": person._id },
-      ],
-    })
-      .select({
-        slug: 1,
-        type: 1,
-        title: 1,
-        originalTitle: 1,
-        releaseYear: 1,
-        assets: 1,
-        rating: 1,
-        "credits.cast": 1,
-        "credits.crew": 1,
-      })
-      .sort({ releaseYear: -1, _id: -1 })
-      .limit(100)
-      .lean();
-
-    const filmography = mediaList.map((m) =>
-      toFilmographyItemDto(m, person._id),
-    );
+    let filmography = [];
+    if (
+      person.imdbId &&
+      typeof mediaService?.getFilmographyByPersonImdbId === "function"
+    ) {
+      try {
+        const filmographyResult =
+          await mediaService.getFilmographyByPersonImdbId(person.imdbId, {
+            limit: 100,
+          });
+        filmography = filmographyResult?.data ?? [];
+      } catch {
+        filmography = [];
+      }
+    }
 
     return {
       ...toPersonDetailsDto(person),
@@ -90,6 +89,7 @@ export const personService = {
 
   async createPerson(payload) {
     if (payload.imdbId) {
+      payload.imdbId = payload.imdbId.toLowerCase().trim();
       const existingImdb = await personRepository.findByImdbId(payload.imdbId);
       if (existingImdb) {
         throw new ConflictError(
@@ -101,7 +101,7 @@ export const personService = {
     const baseSlug = payload.slug
       ? generateSlug(payload.slug)
       : generateSlug(payload.name?.en);
-    payload.slug = await resolveUniqueSlug(baseSlug);
+    payload.slug = await resolveUniqueSlugOptimized(baseSlug);
 
     if (payload.personalRelationships) {
       payload.personalRelationships = normalizePersonalRelationships(
@@ -132,21 +132,30 @@ export const personService = {
       throw new NotFoundError(`Person with id '${id}' was not found.`);
     }
 
-    if (payload.imdbId && payload.imdbId !== person.imdbId) {
-      const existingImdb = await personRepository.findByImdbId(payload.imdbId);
-      if (existingImdb && String(existingImdb._id) !== String(id)) {
-        throw new ConflictError(
-          `Person with imdbId '${payload.imdbId}' already exists.`,
+    if (payload.imdbId) {
+      payload.imdbId = payload.imdbId.toLowerCase().trim();
+      if (payload.imdbId !== person.imdbId) {
+        const existingImdb = await personRepository.findByImdbId(
+          payload.imdbId,
         );
+        if (existingImdb && String(existingImdb._id) !== String(id)) {
+          throw new ConflictError(
+            `Person with imdbId '${payload.imdbId}' already exists.`,
+          );
+        }
       }
     }
 
-    if (payload.name?.en && !payload.slug) {
-      const baseSlug = generateSlug(payload.name.en);
-      payload.slug = await resolveUniqueSlug(baseSlug, id);
-    } else if (payload.slug) {
-      const baseSlug = generateSlug(payload.slug);
-      payload.slug = await resolveUniqueSlug(baseSlug, id);
+    if (payload.slug) {
+      payload.slug = await resolveUniqueSlugOptimized(
+        generateSlug(payload.slug),
+        id,
+      );
+    } else if (payload.name?.en && payload.name.en !== person.name?.en) {
+      payload.slug = await resolveUniqueSlugOptimized(
+        generateSlug(payload.name.en),
+        id,
+      );
     }
 
     if (payload.personalRelationships) {
@@ -164,7 +173,6 @@ export const personService = {
     try {
       const updated = await personRepository.updateById(id, payload);
 
-      // درستی تراکنش: حذف عکس قبلی صرفاً پس از موفقیت قطعی آپدیت در دیتابیس
       if (payload.avatar && oldAvatar && payload.avatar !== oldAvatar) {
         await removeFileSafely(oldAvatar);
       }

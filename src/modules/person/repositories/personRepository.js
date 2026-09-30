@@ -40,37 +40,44 @@ export const personRepository = {
   async findBySlug(slug, projection = DEFAULT_PERSON_PROJECTION) {
     if (!slug) return null;
     return Person.findOne(
-      { slug: String(slug).toLowerCase() },
+      { slug: String(slug).toLowerCase().trim() },
       projection,
     ).lean();
   },
 
+  async findExistingSlugsByPrefix(baseSlug) {
+    const regex = new RegExp(`^${baseSlug}(?:-\\d+)?$`, "i");
+    const docs = await Person.find({ slug: regex }, { slug: 1, _id: 1 }).lean();
+    return docs;
+  },
+
   async findByImdbId(imdbId, projection = DEFAULT_PERSON_PROJECTION) {
     if (!imdbId) return null;
-    return Person.findOne({ imdbId: String(imdbId).trim() }, projection).lean();
+    return Person.findOne(
+      { imdbId: String(imdbId).trim().toLowerCase() },
+      projection,
+    ).lean();
   },
 
   async findByIdentifier(identifier, projection = DEFAULT_PERSON_PROJECTION) {
     if (!identifier) return null;
     const cleanId = String(identifier).trim();
 
-    // ۱. بررسی شناسه IMDB
+    const conditions = [];
+
     if (/^nm\d+$/i.test(cleanId)) {
-      const byImdb = await Person.findOne(
-        { imdbId: cleanId },
-        projection,
-      ).lean();
-      if (byImdb) return byImdb;
+      conditions.push({ imdbId: cleanId.toLowerCase() });
     }
-
-    // ۲. بررسی شناسه MongoDB ObjectId
     if (mongoose.isValidObjectId(cleanId)) {
-      const byId = await Person.findById(cleanId, projection).lean();
-      if (byId) return byId;
+      conditions.push({ _id: cleanId });
+    }
+    conditions.push({ slug: cleanId.toLowerCase() });
+
+    if (conditions.length === 1) {
+      return Person.findOne(conditions[0], projection).lean();
     }
 
-    // ۳. جستجو بر اساس اسلاگ
-    return Person.findOne({ slug: cleanId.toLowerCase() }, projection).lean();
+    return Person.findOne({ $or: conditions }, projection).lean();
   },
 
   async findAll(queryParams = {}, projection = DEFAULT_PERSON_PROJECTION) {
@@ -90,16 +97,16 @@ export const personRepository = {
       ];
     }
 
-    // بهینه‌سازی: عدم استفاده از پایپ‌لاین سنگین $facet به نفع ایندکس B-Tree
-    // تفکیک مرتب‌سازی بر اساس ایندکس واقعی موجود در دیتابیس
     const sortCriteria = isSearch
       ? { score: { $meta: "textScore" }, starmeterRank: 1 }
       : { starmeterRank: 1, _id: -1 };
 
-    const queryOptions = isSearch ? { score: { $meta: "textScore" } } : {};
+    const queryProjection = isSearch
+      ? { ...projection, score: { $meta: "textScore" } }
+      : projection;
 
     const [items, total] = await Promise.all([
-      Person.find(filter, { ...projection, ...queryOptions })
+      Person.find(filter, queryProjection)
         .sort(sortCriteria)
         .skip(skip)
         .limit(limit)

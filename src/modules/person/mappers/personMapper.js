@@ -68,12 +68,12 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
 
   const targetId = String(personObjectId);
 
-  const matchedCast = media.credits?.cast?.find((c) => {
+  const matchedCast = (media.credits?.cast || []).filter((c) => {
     const castId = c?.person?._id ?? c?.person;
     return castId && String(castId) === targetId;
   });
 
-  const matchedCrew = media.credits?.crew?.filter((c) => {
+  const matchedCrew = (media.credits?.crew || []).filter((c) => {
     const crewId = c?.person?._id ?? c?.person;
     return crewId && String(crewId) === targetId;
   });
@@ -92,13 +92,13 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
           ? media.assets.poster
           : null,
     rating: media.rating ?? null,
-    asCast: matchedCast
-      ? {
-          character: matchedCast.character ?? null,
-          order: matchedCast.order ?? 0,
-        }
+    asCast: matchedCast.length
+      ? matchedCast.map((c) => ({
+          character: c.character ?? null,
+          order: typeof c.order === "number" ? c.order : 0,
+        }))
       : null,
-    asCrew: matchedCrew?.length
+    asCrew: matchedCrew.length
       ? matchedCrew.map((c) => ({
           job: c.job ?? "",
           department: c.department ?? "",
