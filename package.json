@@ -21,7 +21,7 @@
     "dev": "nodemon src/server.js",
     "ai": "node ai-review-bundle.cjs",
     "ch": "git diff > changes.txt",
-    "tunnel": "ssh -R 80:localhost:5000 localhost.run",
+    "tunnel": "cloudflared tunnel run --protocol http2 cineflow-backend-tunnel",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
