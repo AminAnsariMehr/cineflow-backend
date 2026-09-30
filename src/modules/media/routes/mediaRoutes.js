@@ -10,5 +10,6 @@ router.get("/top-imdb", mediaController.getTopImdb);
 router.get("/animations", mediaController.getAnimations);
 router.get("/persian-dubbed", mediaController.getPersianDubbed);
 router.get("/:slug", mediaController.getMediaBySlug);
+router.get("/person/:personIMDbId", mediaController.getPersonFilmography);
 
 export default router;

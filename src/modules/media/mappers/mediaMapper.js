@@ -84,7 +84,6 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
 
-  // بازیگران به همراه آبجکت شخص
   const cast = Array.isArray(media.credits?.cast)
     ? media.credits.cast
         .map((item) => {
@@ -160,5 +159,59 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
     isTop10: Boolean(media.isTop10),
     isUpcoming: Boolean(media.isUpcoming),
     isExclusive: Boolean(media.isExclusive),
+  };
+};
+
+export const toFilmographyItemDto = (mediaDoc, personIMDbId) => {
+  const media = toPlainObject(mediaDoc);
+  if (!media) return null;
+
+  const targetId = String(personIMDbId).trim();
+  const roles = [];
+  let character = null;
+  let order = null;
+
+  if (Array.isArray(media.credits?.cast)) {
+    const castMatch = media.credits.cast.find(
+      (c) => c.personIMDbId === targetId,
+    );
+    if (castMatch) {
+      roles.push("cast");
+      character = castMatch.character ?? null;
+      order = castMatch.order ?? null;
+    }
+  }
+
+  // ۲. بررسی بخش کارگردانی
+  if (Array.isArray(media.credits?.directors)) {
+    const isDirector = media.credits.directors.some(
+      (d) => d.personIMDbId === targetId,
+    );
+    if (isDirector) roles.push("director");
+  }
+
+  // ۳. بررسی بخش نویسندگی
+  if (Array.isArray(media.credits?.writers)) {
+    const isWriter = media.credits.writers.some(
+      (w) => w.personIMDbId === targetId,
+    );
+    if (isWriter) roles.push("writer");
+  }
+
+  return {
+    id: getEntityId(media),
+    imdbId: media.imdbId,
+    slug: media.slug ?? null,
+    type: media.type ?? null,
+    title: media.title ?? { fa: "", en: "" },
+    originalTitle: media.originalTitle ?? "",
+    releaseYear: media.releaseYear ?? null,
+    duration: media.type === "movie" ? (media.duration ?? null) : null,
+    poster: getPosterUrl(media.assets),
+    rating: media.rating ?? null,
+    genres: media.genres ?? { fa: [], en: [] },
+    roleTypes: roles,
+    character,
+    order,
   };
 };

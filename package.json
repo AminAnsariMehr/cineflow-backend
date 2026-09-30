@@ -13,7 +13,7 @@
     "#modules/*": "./src/modules/*",
     "#media/*": "./src/modules/media/*",
     "#collections/*": "./src/modules/collections/*",
-    "#people/*": "./src/modules/people/*",
+    "#person/*": "./src/modules/person/*",
     "#shared/*": "./src/shared/*",
     "#utils/*": "./src/shared/utils/*"
   },

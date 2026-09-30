@@ -12,5 +12,5 @@
       "#utils/*": ["./src/shared/utils/*"]
     }
   },
-  "include": ["src/**/*.js", "src/stores/usePeopleStore.ts"]
+  "include": ["src/**/*.js", "src/stores/usePersonStore.ts"]
 }

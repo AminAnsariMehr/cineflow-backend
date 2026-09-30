@@ -52,7 +52,12 @@ const personalRelationshipSchema = new mongoose.Schema(
       default: "relative",
     },
     name: { type: String, required: true, trim: true },
-    imdbId: { type: String, default: null, trim: true },
+    imdbId: {
+      type: String,
+      default: null,
+      trim: true,
+      match: [/^$|^nm\d+$/i, "Invalid IMDb ID for relationship"],
+    },
     attributes: { type: String, default: null, trim: true },
   },
   { _id: false },
@@ -69,6 +74,10 @@ const personSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      match: [
+        /^nm\d+$/i,
+        "Invalid person IMDb ID format (expected 'nm' followed by digits)",
+      ],
     },
     slug: {
       type: String,
@@ -102,7 +111,7 @@ const personSchema = new mongoose.Schema(
     height: {
       type: Number,
       default: null,
-      min: 0,
+      min: [0, "Height must be a positive number"],
     },
     biography: {
       type: localizedStringSchema,
@@ -115,7 +124,7 @@ const personSchema = new mongoose.Schema(
     starmeterRank: {
       type: Number,
       default: null,
-      min: 1,
+      min: [1, "Starmeter rank must be at least 1"],
     },
     awardsSummary: {
       type: awardsSummarySchema,
@@ -155,19 +164,28 @@ const personSchema = new mongoose.Schema(
   },
 );
 
-// Indexes (تعریف یکتایی صرفاً در ایندکس‌ها)
+// Indexes
 personSchema.index({ imdbId: 1 }, { unique: true, name: "idx_person_imdb_id" });
 personSchema.index({ slug: 1 }, { unique: true, name: "idx_person_slug" });
+
+// Index for Pagination & Default Sorting (High-performance B-Tree Index)
+personSchema.index(
+  { starmeterRank: 1, _id: -1 },
+  { name: "idx_person_starmeter_id" },
+);
+
 personSchema.index({ "name.en": 1, _id: 1 }, { name: "idx_person_name_en_id" });
 personSchema.index({ "name.fa": 1, _id: 1 }, { name: "idx_person_name_fa_id" });
 personSchema.index(
-  { "primaryProfessions.en": 1, "name.en": 1, _id: 1 },
-  { name: "idx_person_prof_en_name_en_id" },
+  { "primaryProfessions.en": 1, starmeterRank: 1 },
+  { name: "idx_person_prof_en_rank" },
 );
 personSchema.index(
-  { "primaryProfessions.fa": 1, "name.fa": 1, _id: 1 },
-  { name: "idx_person_prof_fa_name_fa_id" },
+  { "primaryProfessions.fa": 1, starmeterRank: 1 },
+  { name: "idx_person_prof_fa_rank" },
 );
+
+// Full-text search
 personSchema.index(
   { "name.en": "text", "name.fa": "text" },
   { weights: { "name.en": 2, "name.fa": 1 }, name: "idx_person_name_text" },

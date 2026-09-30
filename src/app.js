@@ -15,7 +15,7 @@ import {
 
 // ----------------------- Module ------------------------
 import { mediaModule } from "./modules/media/media.module.js";
-import { peopleModule } from "./modules/people/people.module.js";
+import { personModule } from "./modules/person/person.module.js";
 // import { collectionModule } from "./modules/collections/collections.module";
 import { seasonsModule } from "./modules/seasons/seasons.module.js";
 
@@ -75,7 +75,7 @@ app.get("/health", (req, res) => {
 
 // -------- Module Registration ----------
 mediaModule(app);
-peopleModule(app);
+personModule(app);
 seasonsModule(app);
 
 // ------ Middleware Registration --------

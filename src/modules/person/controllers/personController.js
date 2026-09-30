@@ -1,7 +1,8 @@
-import { peopleService } from "../services/peopleService.js";
+import { personService } from "../services/personService.js";
 import { BadRequestError } from "#shared/errors/AppError.js";
 import { removeFileSafely } from "#shared/utils/file.util.js";
 import { normalizePersonalRelationships } from "../utils/relationship.util.js";
+import { mediaService } from "../../media/services/mediaService.js";
 
 const safeJsonParse = (value, fieldName) => {
   if (value == null) return undefined;
@@ -15,6 +16,17 @@ const safeJsonParse = (value, fieldName) => {
   } catch {
     throw new BadRequestError(`Invalid JSON for field '${fieldName}'`);
   }
+};
+
+const parseNumericField = (value, fieldName) => {
+  if (value === undefined || value === "") return undefined;
+  if (value === null || value === "null") return null;
+
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) {
+    throw new BadRequestError(`Field '${fieldName}' must be a valid number.`);
+  }
+  return parsed;
 };
 
 const parseMultipartBody = (body) => {
@@ -58,30 +70,30 @@ const parseMultipartBody = (body) => {
     payload.deathDate = null;
   }
 
-  if (payload.height !== undefined && payload.height !== "") {
-    payload.height = payload.height === "null" ? null : Number(payload.height);
-  }
-  if (payload.starmeterRank !== undefined && payload.starmeterRank !== "") {
-    payload.starmeterRank =
-      payload.starmeterRank === "null" ? null : Number(payload.starmeterRank);
-  }
+  payload.height = parseNumericField(payload.height, "height");
+  payload.starmeterRank = parseNumericField(
+    payload.starmeterRank,
+    "starmeterRank",
+  );
 
   return payload;
 };
 
-export const peopleController = {
-  async getAllPeople(req, res, next) {
+export const personController = {
+  async getAllPerson(req, res, next) {
     try {
-      const { data, pagination } = await peopleService.getAllPeople(req.query);
+      const { data, pagination } = await personService.getAllPerson(req.query);
       return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
       return next(error);
     }
   },
 
-  async getPersonBySlug(req, res, next) {
+  async getPersonByIdentifier(req, res, next) {
     try {
-      const data = await peopleService.getPersonBySlug(req.params.slug);
+      const data = await personService.getPersonByIdentifier(
+        req.params.identifier,
+      );
       return res.status(200).json({ success: true, data });
     } catch (error) {
       return next(error);
@@ -89,36 +101,46 @@ export const peopleController = {
   },
 
   async createPerson(req, res, next) {
+    let uploadedFilePath = null;
     try {
-      const payload = parseMultipartBody(req.body);
-
       if (req.file) {
-        payload.avatar = `/uploads/avatars/${req.file.filename}`;
+        uploadedFilePath = `/uploads/avatars/${req.file.filename}`;
       }
 
-      const data = await peopleService.createPerson(payload);
+      const payload = parseMultipartBody(req.body);
+
+      if (uploadedFilePath) {
+        payload.avatar = uploadedFilePath;
+      }
+
+      const data = await personService.createPerson(payload);
       return res.status(201).json({ success: true, data });
     } catch (error) {
-      if (req.file) {
-        await removeFileSafely(`/uploads/avatars/${req.file.filename}`);
+      if (uploadedFilePath) {
+        await removeFileSafely(uploadedFilePath);
       }
       return next(error);
     }
   },
 
   async updatePerson(req, res, next) {
+    let uploadedFilePath = null;
     try {
-      const payload = parseMultipartBody(req.body);
-
       if (req.file) {
-        payload.avatar = `/uploads/avatars/${req.file.filename}`;
+        uploadedFilePath = `/uploads/avatars/${req.file.filename}`;
       }
 
-      const data = await peopleService.updatePerson(req.params.id, payload);
+      const payload = parseMultipartBody(req.body);
+
+      if (uploadedFilePath) {
+        payload.avatar = uploadedFilePath;
+      }
+
+      const data = await personService.updatePerson(req.params.id, payload);
       return res.status(200).json({ success: true, data });
     } catch (error) {
-      if (req.file) {
-        await removeFileSafely(`/uploads/avatars/${req.file.filename}`);
+      if (uploadedFilePath) {
+        await removeFileSafely(uploadedFilePath);
       }
       return next(error);
     }
@@ -126,8 +148,24 @@ export const peopleController = {
 
   async deletePerson(req, res, next) {
     try {
-      const data = await peopleService.deletePerson(req.params.id);
+      const data = await personService.deletePerson(req.params.id);
       return res.status(200).json({ success: true, data });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async getPersonMedia(req, res, next) {
+    try {
+      const { imdbId } = req.params;
+      const { data, pagination } =
+        await mediaService.getFilmographyByPersonImdbId(imdbId, req.query);
+
+      return res.status(200).json({
+        success: true,
+        data,
+        pagination,
+      });
     } catch (error) {
       return next(error);
     }

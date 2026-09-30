@@ -1,4 +1,4 @@
-export const RELATIONSHIP_TYPE_MAP = {
+export const RELATIONSHIP_TYPE_MAP = Object.freeze({
   // Spouse variants
   spouse: "spouse",
   husband: "spouse",
@@ -33,16 +33,16 @@ export const RELATIONSHIP_TYPE_MAP = {
   relatives: "relative",
   relative: "relative",
   family: "relative",
-};
+});
 
-export const ALLOWED_RELATIONSHIP_TYPES = [
+export const ALLOWED_RELATIONSHIP_TYPES = Object.freeze([
   "spouse",
   "partner",
   "parent",
   "child",
   "sibling",
   "relative",
-];
+]);
 
 export const normalizeRelationshipType = (input) => {
   if (input == null) return "relative";
@@ -58,25 +58,26 @@ export const normalizePersonalRelationships = (value) => {
   if (!Array.isArray(value)) return [];
 
   return value
+    .filter((r) => r && typeof r === "object")
     .map((r) => {
-      if (!r || typeof r !== "object") return null;
-
       const type = normalizeRelationshipType(r.type);
-      const name = typeof r.name === "string" ? r.name.trim() : (r.name ?? "");
-      const imdbId =
-        typeof r.imdbId === "string" ? r.imdbId.trim() : (r.imdbId ?? null);
-      const attributes =
-        typeof r.attributes === "string"
-          ? r.attributes.trim()
-          : (r.attributes ?? null);
-
+      const name = typeof r.name === "string" ? r.name.trim() : "";
       if (!name) return null;
+
+      const imdbId =
+        typeof r.imdbId === "string" && r.imdbId.trim()
+          ? r.imdbId.trim()
+          : null;
+      const attributes =
+        typeof r.attributes === "string" && r.attributes.trim()
+          ? r.attributes.trim()
+          : null;
 
       return {
         type,
         name,
-        imdbId: imdbId || null,
-        attributes: attributes || null,
+        imdbId,
+        attributes,
       };
     })
     .filter(Boolean);

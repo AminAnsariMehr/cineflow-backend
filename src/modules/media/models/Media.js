@@ -417,4 +417,19 @@ mediaSchema.index(
   { name: "idx_top_imdb_full_sort" },
 );
 
+mediaSchema.index(
+  { "credits.cast.personIMDbId": 1, releaseYear: -1, createdAt: -1 },
+  { name: "idx_cast_person_timeline" },
+);
+
+mediaSchema.index(
+  { "credits.directors.personIMDbId": 1, releaseYear: -1 },
+  { name: "idx_directors_person_timeline" },
+);
+
+mediaSchema.index(
+  { "credits.writers.personIMDbId": 1, releaseYear: -1 },
+  { name: "idx_writers_person_timeline" },
+);
+
 export const Media = mongoose.model("Media", mediaSchema, "media");

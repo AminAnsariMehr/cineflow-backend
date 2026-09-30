@@ -179,20 +179,26 @@ export const mediaRepository = {
     return { items, totalItems, page, limit };
   },
 
-  async findFilmographyByPersonId(personObjectId, query = {}) {
-    if (!personObjectId) {
-      return { items: [], totalItems: 0, page: 1, limit: 50 };
+  async findFilmographyByPersonImdbId(personIMDbId, query = {}) {
+    if (!personIMDbId) {
+      return { items: [], totalItems: 0, page: 1, limit: 20 };
     }
+
+    const normalizedId = String(personIMDbId).trim();
 
     const filter = {
       $or: [
-        { "credits.cast.person": personObjectId },
-        { "credits.directors": personObjectId },
-        { "credits.writers": personObjectId },
+        { "credits.cast.personIMDbId": normalizedId },
+        { "credits.directors.personIMDbId": normalizedId },
+        { "credits.writers.personIMDbId": normalizedId },
       ],
     };
 
-    const { page, limit, skip } = normalizePagination(query, 50, 100);
+    if (query.type) {
+      filter.type = query.type;
+    }
+
+    const { page, limit, skip } = normalizePagination(query, 20, 50);
 
     const [items, totalItems] = await Promise.all([
       Media.find(filter)

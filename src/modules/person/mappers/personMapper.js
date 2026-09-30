@@ -6,6 +6,7 @@ export const toPersonDetailsDto = (personDoc) => {
   if (!person) return null;
 
   return {
+    id: getEntityId(person),
     imdbId: person.imdbId ?? "",
     slug: person.slug ?? "",
     name: {
@@ -19,7 +20,10 @@ export const toPersonDetailsDto = (personDoc) => {
       en: person.birthPlace?.en ?? "",
       fa: person.birthPlace?.fa ?? "",
     },
-    height: typeof person.height === "number" ? person.height : null,
+    height:
+      typeof person.height === "number" && !Number.isNaN(person.height)
+        ? person.height
+        : null,
     biography: {
       en: person.biography?.en ?? "",
       fa: person.biography?.fa ?? "",
@@ -33,7 +37,10 @@ export const toPersonDetailsDto = (personDoc) => {
         : [],
     },
     starmeterRank:
-      typeof person.starmeterRank === "number" ? person.starmeterRank : null,
+      typeof person.starmeterRank === "number" &&
+      !Number.isNaN(person.starmeterRank)
+        ? person.starmeterRank
+        : null,
     awardsSummary: {
       oscarWins: person.awardsSummary?.oscarWins ?? 0,
       oscarNominations: person.awardsSummary?.oscarNominations ?? 0,
@@ -50,6 +57,8 @@ export const toPersonDetailsDto = (personDoc) => {
       : [],
     avatar: person.avatar ?? "",
     images: Array.isArray(person.images) ? person.images.slice(0, 5) : [],
+    createdAt: person.createdAt ?? null,
+    updatedAt: person.updatedAt ?? null,
   };
 };
 
@@ -59,23 +68,23 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
 
   const targetId = String(personObjectId);
 
-  const matchedCast = media.credits?.cast?.find((castMember) => {
-    const castPersonId = castMember?.person?._id ?? castMember?.person;
-    return castPersonId && String(castPersonId) === targetId;
+  const matchedCast = media.credits?.cast?.find((c) => {
+    const castId = c?.person?._id ?? c?.person;
+    return castId && String(castId) === targetId;
   });
 
-  const matchedCrew = media.credits?.crew?.filter((crewMember) => {
-    const crewPersonId = crewMember?.person?._id ?? crewMember?.person;
-    return crewPersonId && String(crewPersonId) === targetId;
+  const matchedCrew = media.credits?.crew?.filter((c) => {
+    const crewId = c?.person?._id ?? c?.person;
+    return crewId && String(crewId) === targetId;
   });
 
   return {
     id: getEntityId(media),
-    slug: media.slug,
-    type: media.type,
-    title: media.title,
+    slug: media.slug ?? "",
+    type: media.type ?? "movie",
+    title: media.title ?? "",
     originalTitle: media.originalTitle ?? "",
-    releaseYear: media.releaseYear,
+    releaseYear: media.releaseYear ?? null,
     poster:
       typeof media.assets?.poster?.vertical === "string"
         ? media.assets.poster.vertical
@@ -90,7 +99,10 @@ export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
         }
       : null,
     asCrew: matchedCrew?.length
-      ? matchedCrew.map((c) => ({ job: c.job, department: c.department }))
+      ? matchedCrew.map((c) => ({
+          job: c.job ?? "",
+          department: c.department ?? "",
+        }))
       : null,
   };
 };

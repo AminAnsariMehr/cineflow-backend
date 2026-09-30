@@ -65,4 +65,18 @@ export const mediaController = {
       next(error);
     }
   },
+
+  async getPersonFilmography(req, res, next) {
+    try {
+      const { personIMDbId } = req.params;
+      const { data, pagination } =
+        await mediaService.getFilmographyByPersonImdbId(
+          personIMDbId,
+          req.query,
+        );
+      res.json({ success: true, data, pagination });
+    } catch (error) {
+      next(error);
+    }
+  },
 };

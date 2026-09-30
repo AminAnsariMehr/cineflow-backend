@@ -9,11 +9,13 @@ import {
   BadRequestError,
 } from "../../../shared/errors/AppError.js";
 import { toMediaListDto, toMediaDetailsDto } from "../mappers/mediaMapper.js";
-import { toFilmographyItemDto } from "../../people/mappers/peopleMapper.js";
+import { toFilmographyItemDto } from "../../person/mappers/personMapper.js";
 
 import { isValidObjectId } from "#shared/utils/objectId.util.js";
-import { peopleRepository } from "#modules/people/repositories/peopleRepository.js";
+import { personRepository } from "#modules/person/repositories/personRepository.js";
 import { collectionRepository } from "#modules/collections/repositories/collectionRepository.js";
+
+const IMDB_PERSON_REGEX = /^nm\d+$/;
 
 const safeMap = (items, mapper) => {
   if (!Array.isArray(items)) return [];
@@ -70,12 +72,12 @@ async function validateReferences(payload) {
       throw new BadRequestError(`Invalid Collection ID: ${id}`);
   }
 
-  const [peopleExist, collectionsExist] = await Promise.all([
-    peopleRepository.existsByIds(Array.from(castPersonIds)),
+  const [personExist, collectionsExist] = await Promise.all([
+    personRepository.existsByIds(Array.from(castPersonIds)),
     collectionRepository.existsByIds(Array.from(collectionIds)),
   ]);
 
-  if (!peopleExist)
+  if (!personExist)
     throw new BadRequestError(
       "One or more specified Cast members do not exist",
     );
@@ -163,6 +165,30 @@ export const mediaService = {
     return {
       data: safeMap(result.items, (media) =>
         toFilmographyItemDto(media, personObjectId),
+      ),
+      pagination: buildPaginationMeta(
+        result.totalItems,
+        result.page,
+        result.limit,
+      ),
+    };
+  },
+
+  async getFilmographyByPersonImdbId(personIMDbId, query = {}) {
+    if (!personIMDbId || !IMDB_PERSON_REGEX.test(personIMDbId)) {
+      throw new BadRequestError(
+        "Invalid IMDb Person ID format (expected nm followed by digits)",
+      );
+    }
+
+    const result = await mediaRepository.findFilmographyByPersonImdbId(
+      personIMDbId,
+      normalizeQueryObject(query),
+    );
+
+    return {
+      data: safeMap(result.items, (media) =>
+        toFilmographyItemDto(media, personIMDbId),
       ),
       pagination: buildPaginationMeta(
         result.totalItems,

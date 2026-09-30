@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Person } from "../models/Person.js";
 import {
   normalizePagination,
@@ -25,17 +26,19 @@ const DEFAULT_PERSON_PROJECTION = {
   updatedAt: 1,
 };
 
-export const peopleRepository = {
+export const personRepository = {
   async create(personData) {
     const person = await Person.create(personData);
     return person.toObject();
   },
 
   async findById(id, projection = DEFAULT_PERSON_PROJECTION) {
+    if (!mongoose.isValidObjectId(id)) return null;
     return Person.findById(id, projection).lean();
   },
 
   async findBySlug(slug, projection = DEFAULT_PERSON_PROJECTION) {
+    if (!slug) return null;
     return Person.findOne(
       { slug: String(slug).toLowerCase() },
       projection,
@@ -43,14 +46,15 @@ export const peopleRepository = {
   },
 
   async findByImdbId(imdbId, projection = DEFAULT_PERSON_PROJECTION) {
-    return Person.findOne({ imdbId }, projection).lean();
+    if (!imdbId) return null;
+    return Person.findOne({ imdbId: String(imdbId).trim() }, projection).lean();
   },
 
   async findByIdentifier(identifier, projection = DEFAULT_PERSON_PROJECTION) {
     if (!identifier) return null;
     const cleanId = String(identifier).trim();
 
-    // ۱. بررسی فرمت IMDb ID (معمولاً با nm شروع می‌شود)
+    // ۱. بررسی شناسه IMDB
     if (/^nm\d+$/i.test(cleanId)) {
       const byImdb = await Person.findOne(
         { imdbId: cleanId },
@@ -65,61 +69,43 @@ export const peopleRepository = {
       if (byId) return byId;
     }
 
-    // ۳. پیش‌فرض جستجو بر اساس slug
+    // ۳. جستجو بر اساس اسلاگ
     return Person.findOne({ slug: cleanId.toLowerCase() }, projection).lean();
   },
 
   async findAll(queryParams = {}, projection = DEFAULT_PERSON_PROJECTION) {
     const { page, limit, skip } = normalizePagination(queryParams);
-    const matchFilter = {};
-    const isSearch = Boolean(queryParams.search);
+    const filter = {};
+    const isSearch = Boolean(queryParams.search?.trim());
 
     if (isSearch) {
-      matchFilter.$text = { $search: queryParams.search };
+      filter.$text = { $search: queryParams.search.trim() };
     }
 
-    if (queryParams.profession) {
-      matchFilter.$or = [
-        { "primaryProfessions.en": queryParams.profession },
-        { "primaryProfessions.fa": queryParams.profession },
+    if (queryParams.profession?.trim()) {
+      const prof = queryParams.profession.trim();
+      filter.$or = [
+        { "primaryProfessions.en": prof },
+        { "primaryProfessions.fa": prof },
       ];
     }
 
-    const pipeline = [
-      { $match: matchFilter },
-      {
-        $addFields: {
-          hasRank: {
-            $cond: [
-              {
-                $and: [
-                  { $ne: ["$starmeterRank", null] },
-                  { $gt: ["$starmeterRank", 0] },
-                ],
-              },
-              1,
-              0,
-            ],
-          },
-          ...(isSearch ? { score: { $meta: "textScore" } } : {}),
-        },
-      },
-      {
-        $sort: isSearch
-          ? { score: { $meta: "textScore" }, hasRank: -1, starmeterRank: 1 }
-          : { hasRank: -1, starmeterRank: 1, _id: -1 },
-      },
-      {
-        $facet: {
-          items: [{ $skip: skip }, { $limit: limit }, { $project: projection }],
-          totalCount: [{ $count: "count" }],
-        },
-      },
-    ];
+    // بهینه‌سازی: عدم استفاده از پایپ‌لاین سنگین $facet به نفع ایندکس B-Tree
+    // تفکیک مرتب‌سازی بر اساس ایندکس واقعی موجود در دیتابیس
+    const sortCriteria = isSearch
+      ? { score: { $meta: "textScore" }, starmeterRank: 1 }
+      : { starmeterRank: 1, _id: -1 };
 
-    const [result] = await Person.aggregate(pipeline).allowDiskUse(true);
-    const items = result?.items ?? [];
-    const total = result?.totalCount?.[0]?.count ?? 0;
+    const queryOptions = isSearch ? { score: { $meta: "textScore" } } : {};
+
+    const [items, total] = await Promise.all([
+      Person.find(filter, { ...projection, ...queryOptions })
+        .sort(sortCriteria)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Person.countDocuments(filter),
+    ]);
 
     return {
       items,
@@ -128,14 +114,17 @@ export const peopleRepository = {
   },
 
   async updateById(id, updateData, projection = DEFAULT_PERSON_PROJECTION) {
+    if (!mongoose.isValidObjectId(id)) return null;
+
     return Person.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true, fields: projection },
+      { new: true, runValidators: true, projection },
     ).lean();
   },
 
   async deleteById(id) {
+    if (!mongoose.isValidObjectId(id)) return null;
     return Person.findByIdAndDelete(id).lean();
   },
 };
