@@ -87,7 +87,7 @@ async function validateReferences(payload) {
 
 export const mediaService = {
   async getAllMedia(query = {}) {
-    const items = await mediaRepository.findAll(normalizeQueryObject(query));
+    const result = await mediaRepository.findAll(normalizeQueryObject(query));
     return formatPaginatedResult(result, toMediaListDto);
   },
 

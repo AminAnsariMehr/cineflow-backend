@@ -89,14 +89,26 @@ export const personRepository = {
       filter.$text = { $search: queryParams.search.trim() };
     }
 
-    if (queryParams.profession?.trim()) {
-      const prof = queryParams.profession.trim();
+    // ۱. فیلتر حرفه (اگر ارسال شد از همان، در غیر این‌صورت پیش‌فرض بازیگر)
+    const profession = queryParams.profession?.trim();
+    if (profession) {
       filter.$or = [
-        { "primaryProfessions.en": prof },
-        { "primaryProfessions.fa": prof },
+        { "primaryProfessions.en": profession },
+        { "primaryProfessions.fa": profession },
+      ];
+    } else if (!isSearch) {
+      filter.$or = [
+        { "primaryProfessions.en": { $in: ["actor", "actress"] } },
+        { "primaryProfessions.fa": "بازیگر" },
       ];
     }
 
+    // ۲. حذف رکوردهایی که starmeterRank ندارند تا با سورت صعودی در ابتدای لیست نیایند
+    if (!isSearch) {
+      filter.starmeterRank = { $ne: null, $gt: 0 };
+    }
+
+    // ۳. سورت بر اساس محبوبیت (کمترین رنک استارمتر یعنی محبوب‌ترین)
     const sortCriteria = isSearch
       ? { score: { $meta: "textScore" }, starmeterRank: 1 }
       : { starmeterRank: 1, _id: -1 };

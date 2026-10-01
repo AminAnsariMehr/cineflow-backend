@@ -8,31 +8,120 @@ import {
   COLLECTION_SUMMARY_PROJECTION,
 } from "./media.projections.js";
 
-const normalizeStringQuery = (value) => {
+const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeString = (value) => {
   if (typeof value !== "string") return null;
-  const normalized = value.trim();
-  return normalized || null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
+
+const parseBoolean = (val) =>
+  val === true || val === "true" || val === 1 || val === "1";
+
+const normalizeSlugParam = (value) => normalizeString(value);
 
 export const mediaRepository = {
   async findAll(query = {}) {
+    const {
+      type,
+      genre,
+      language,
+      hasPersianDub,
+      isUpcoming,
+      isTop10,
+      sort = "latest",
+    } = query;
+
     const filter = {};
-    const { type, genre, language } = query;
+    const andConditions = [];
 
-    const normalizedType = normalizeStringQuery(type);
-    const normalizedGenre = normalizeStringQuery(genre);
-    const normalizedLanguage = normalizeStringQuery(language);
+    // ۱. فیلتر نوع رسانه
+    const cleanType = normalizeString(type);
+    if (cleanType && ["movie", "series"].includes(cleanType.toLowerCase())) {
+      filter.type = cleanType.toLowerCase();
+    }
 
-    if (normalizedType) filter.type = normalizedType;
-    if (normalizedGenre) filter.genres = normalizedGenre;
-    if (normalizedLanguage) filter.languages = normalizedLanguage;
+    // ۲. فیلتر امن ژانر (انگلیسی و فارسی)
+    const cleanGenre = normalizeString(genre);
+    if (cleanGenre) {
+      andConditions.push({
+        $or: [
+          {
+            "genres.en": {
+              $regex: new RegExp(`^${escapeRegex(cleanGenre)}$`, "i"),
+            },
+          },
+          { "genres.fa": cleanGenre },
+        ],
+      });
+    }
+
+    // ۳. فیلتر امن زبان
+    const cleanLanguage = normalizeString(language);
+    if (cleanLanguage) {
+      andConditions.push({
+        $or: [
+          {
+            "languages.en": {
+              $regex: new RegExp(`^${escapeRegex(cleanLanguage)}$`, "i"),
+            },
+          },
+          { "languages.fa": cleanLanguage },
+        ],
+      });
+    }
+
+    // ۴. فیلترهای بولین
+    if (hasPersianDub !== undefined && parseBoolean(hasPersianDub)) {
+      filter.hasPersianDub = true;
+    }
+
+    if (isUpcoming !== undefined && parseBoolean(isUpcoming)) {
+      filter.isUpcoming = true;
+    }
+
+    if (isTop10 !== undefined && parseBoolean(isTop10)) {
+      filter.isTop10 = true;
+      filter["rating.imdb"] = { $gt: 0 };
+    }
+
+    // در صورتی که شرط‌های اور وجود داشته باشند داخل $and قرار می‌گیرند
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
+    }
+
+    // ۵. منطق Sort بر اساس ایندکس‌های دیتابیس
+    let sortOption = { createdAt: -1, _id: -1 };
+
+    switch (sort) {
+      case "top-imdb":
+        filter["rating.imdb"] = { $gt: 0 };
+        sortOption = {
+          "rating.imdb": -1,
+          "rating.voteCount": -1,
+          createdAt: -1,
+          _id: -1,
+        };
+        break;
+      case "upcoming":
+        sortOption = { releaseYear: 1, createdAt: -1, _id: -1 };
+        break;
+      case "latest-release":
+        sortOption = { releaseYear: -1, createdAt: -1, _id: -1 };
+        break;
+      case "latest":
+      default:
+        sortOption = { createdAt: -1, _id: -1 };
+        break;
+    }
 
     const { page, limit, skip } = normalizePagination(query);
 
     const [items, totalItems] = await Promise.all([
       Media.find(filter)
         .select(MEDIA_LIST_PROJECTION)
-        .sort({ createdAt: -1, _id: -1 })
+        .sort(sortOption)
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -71,112 +160,6 @@ export const mediaRepository = {
         _id: 1,
       })
       .lean();
-  },
-
-  async findTop10(query = {}) {
-    const filter = {
-      isTop10: true,
-      "rating.imdb": { $gt: 0 },
-    };
-
-    const { page, limit, skip } = normalizePagination(query, 10, 10);
-
-    const [items, totalItems] = await Promise.all([
-      Media.find(filter)
-        .select(MEDIA_LIST_PROJECTION)
-        .sort({
-          "rating.imdb": -1,
-          "rating.voteCount": -1,
-          createdAt: -1,
-          _id: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Media.countDocuments(filter),
-    ]);
-
-    return { items, totalItems, page, limit };
-  },
-
-  async findTopImdb(query = {}) {
-    const filter = {
-      "rating.imdb": { $gt: 0 },
-    };
-
-    const { page, limit, skip } = normalizePagination(query);
-
-    const [items, totalItems] = await Promise.all([
-      Media.find(filter)
-        .select(MEDIA_LIST_PROJECTION)
-        .sort({
-          "rating.imdb": -1,
-          "rating.voteCount": -1,
-          createdAt: -1,
-          _id: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Media.countDocuments(filter),
-    ]);
-
-    return { items, totalItems, page, limit };
-  },
-
-  async findUpcoming(query = {}) {
-    const filter = { isUpcoming: true };
-    const { page, limit, skip } = normalizePagination(query);
-
-    const [items, totalItems] = await Promise.all([
-      Media.find(filter)
-        .select(MEDIA_LIST_PROJECTION)
-        .sort({
-          releaseYear: 1,
-          createdAt: -1,
-          _id: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Media.countDocuments(filter),
-    ]);
-
-    return { items, totalItems, page, limit };
-  },
-
-  async findAnimations(query = {}) {
-    const filter = { genres: "Animation" };
-    const { page, limit, skip } = normalizePagination(query);
-
-    const [items, totalItems] = await Promise.all([
-      Media.find(filter)
-        .select(MEDIA_LIST_PROJECTION)
-        .sort({ createdAt: -1, _id: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Media.countDocuments(filter),
-    ]);
-
-    return { items, totalItems, page, limit };
-  },
-
-  async findPersianDubbed(query = {}) {
-    const filter = { hasPersianDub: true };
-    const { page, limit, skip } = normalizePagination(query);
-
-    const [items, totalItems] = await Promise.all([
-      Media.find(filter)
-        .select(MEDIA_LIST_PROJECTION)
-        .sort({ createdAt: -1, _id: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Media.countDocuments(filter),
-    ]);
-
-    return { items, totalItems, page, limit };
   },
 
   async findFilmographyByPersonImdbId(personIMDbId, query = {}) {
@@ -219,10 +202,4 @@ export const mediaRepository = {
 
     return { items, totalItems, page, limit };
   },
-};
-
-const normalizeSlugParam = (value) => {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim();
-  return normalized || null;
 };
