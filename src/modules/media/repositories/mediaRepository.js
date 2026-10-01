@@ -1,7 +1,9 @@
 import { Media } from "../models/Media.js";
+import mongoose from "mongoose";
 import { normalizePagination } from "../../../shared/utils/pagination.util.js";
 import {
   MEDIA_LIST_PROJECTION,
+  MEDIA_SLIDER_PROJECTION,
   MEDIA_DETAILS_PROJECTION,
   PERSON_SUMMARY_PROJECTION,
   COLLECTION_TIMELINE_PROJECTION,
@@ -22,6 +24,70 @@ const parseBoolean = (val) =>
 const normalizeSlugParam = (value) => normalizeString(value);
 
 export const mediaRepository = {
+  async findFeaturedSlider(limit = 10) {
+    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 20);
+
+    return Media.find({ isFeatured: true })
+      .select(MEDIA_SLIDER_PROJECTION)
+      .sort({ featuredOrder: 1, createdAt: -1 })
+      .limit(safeLimit)
+      .lean();
+  },
+
+  async updateSliderOrder(items = []) {
+    // ۱. استخراج آرایه با پشتیبانی از هر دو فرمت: آرایه مستقیم یا آبجکت { items: [...] }
+    const list = Array.isArray(items) ? items : items?.items || [];
+    if (!list.length) return { matchedCount: 0, modifiedCount: 0, count: 0 };
+
+    // ۲. ریست کردن اسلایدرهای قبلی
+    await Media.updateMany(
+      { isFeatured: true },
+      { $set: { isFeatured: false, featuredOrder: 0 } },
+    );
+
+    // ۳. آماده‌سازی عملیات bulkWrite (پشتیبانی هوشمند از imdbId مثل tt123... و ObjectId)
+    const operations = list.map((item, index) => {
+      const rawId =
+        typeof item === "object" && item !== null
+          ? item.id || item._id || item.imdbId
+          : item;
+
+      const order =
+        typeof item === "object" && item?.order !== undefined
+          ? item.order
+          : index + 1;
+
+      const idStr = String(rawId || "").trim();
+      const isMongoId =
+        mongoose.Types.ObjectId.isValid(idStr) &&
+        String(new mongoose.Types.ObjectId(idStr)) === idStr;
+
+      const filter = isMongoId
+        ? { _id: new mongoose.Types.ObjectId(idStr) }
+        : { imdbId: idStr };
+
+      return {
+        updateOne: {
+          filter,
+          update: {
+            $set: {
+              isFeatured: true,
+              featuredOrder: order,
+            },
+          },
+        },
+      };
+    });
+
+    const result = await Media.bulkWrite(operations);
+
+    return {
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+      count: result.matchedCount,
+    };
+  },
+
   async findAll(query = {}) {
     const {
       type,
@@ -36,13 +102,11 @@ export const mediaRepository = {
     const filter = {};
     const andConditions = [];
 
-    // ۱. فیلتر نوع رسانه
     const cleanType = normalizeString(type);
     if (cleanType && ["movie", "series"].includes(cleanType.toLowerCase())) {
       filter.type = cleanType.toLowerCase();
     }
 
-    // ۲. فیلتر امن ژانر (انگلیسی و فارسی)
     const cleanGenre = normalizeString(genre);
     if (cleanGenre) {
       andConditions.push({
@@ -57,7 +121,6 @@ export const mediaRepository = {
       });
     }
 
-    // ۳. فیلتر امن زبان
     const cleanLanguage = normalizeString(language);
     if (cleanLanguage) {
       andConditions.push({
@@ -72,7 +135,6 @@ export const mediaRepository = {
       });
     }
 
-    // ۴. فیلترهای بولین
     if (hasPersianDub !== undefined && parseBoolean(hasPersianDub)) {
       filter.hasPersianDub = true;
     }
@@ -86,12 +148,10 @@ export const mediaRepository = {
       filter["rating.imdb"] = { $gt: 0 };
     }
 
-    // در صورتی که شرط‌های اور وجود داشته باشند داخل $and قرار می‌گیرند
     if (andConditions.length > 0) {
       filter.$and = andConditions;
     }
 
-    // ۵. منطق Sort بر اساس ایندکس‌های دیتابیس
     let sortOption = { createdAt: -1, _id: -1 };
 
     switch (sort) {

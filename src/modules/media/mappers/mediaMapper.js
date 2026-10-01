@@ -161,3 +161,66 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
     isExclusive: Boolean(media.isExclusive),
   };
 };
+
+// export const toMediaSliderDto = (mediaDoc) => {
+//   const media = toPlainObject(mediaDoc);
+//   if (!media) return null;
+
+//   return {
+//     id: getEntityId(media),
+//     slug: media.slug ?? null,
+//     type: media.type ?? null,
+//     title: media.title ?? { fa: "", en: "" },
+//     originalTitle: media.originalTitle ?? "",
+//     summary: media.summary ?? { fa: "", en: "" },
+//     releaseYear: media.releaseYear ?? null,
+//     ageRating: media.ageRating ?? null,
+//     duration: media.type === "movie" ? (media.duration ?? null) : null,
+//     genres: Array.isArray(media.genres) ? media.genres : [],
+//     poster: {
+//       vertical: media.assets?.poster?.vertical ?? null,
+//       horizontal: media.assets?.poster?.horizontal ?? null,
+//       backdrop: media.assets?.poster?.backdrop ?? null,
+//     },
+//     rating: {
+//       imdb: media.rating?.imdb ?? null,
+//       userRating: media.rating?.userRating ?? 0,
+//     },
+//     isExclusive: Boolean(media.isExclusive),
+//     order: media.featuredOrder ?? 0,
+//   };
+// };
+
+export const toMediaSliderDto = (mediaDoc) => {
+  const media = toPlainObject(mediaDoc);
+  if (!media) return null;
+
+  return {
+    id: getEntityId(media),
+    slug: media.slug ?? null,
+    imdbId: media.imdbId ?? null,
+    type: media.type ?? null,
+    title: media.title ?? { fa: "", en: "" },
+    originalTitle: media.originalTitle ?? "",
+    summary: media.summary ?? { fa: "", en: "" },
+    releaseYear: media.releaseYear ?? null,
+    ageRating: media.ageRating ?? null,
+    duration: media.type === "movie" ? (media.duration ?? null) : null,
+    genres: Array.isArray(media.genres) ? media.genres : [],
+    // فیلد اصلی استاتیک هماهنگ با بقیه کنترلرها
+    assets: media.assets ?? {},
+    poster: getPosterUrl(media.assets),
+    // تصاویر اختصاصی اسلایدر با اولویت افقی/بک‌دراپ
+    sliderImages: {
+      vertical: media.assets?.poster?.vertical ?? null,
+      horizontal: media.assets?.poster?.horizontal ?? null,
+      backdrop: media.assets?.poster?.backdrop ?? null,
+    },
+    rating: {
+      imdb: media.rating?.imdb ?? null,
+      userRating: media.rating?.userRating ?? 0,
+    },
+    isExclusive: Boolean(media.isExclusive),
+    order: media.featuredOrder ?? 0,
+  };
+};

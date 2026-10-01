@@ -8,12 +8,12 @@ import {
   NotFoundError,
   BadRequestError,
 } from "../../../shared/errors/AppError.js";
-import { toMediaListDto, toMediaDetailsDto } from "../mappers/mediaMapper.js";
+import {
+  toMediaListDto,
+  toMediaDetailsDto,
+  toMediaSliderDto,
+} from "../mappers/mediaMapper.js";
 import { toFilmographyItemDto } from "../../person/mappers/personMapper.js";
-
-import { isValidObjectId } from "#shared/utils/objectId.util.js";
-import { personRepository } from "#modules/person/repositories/personRepository.js";
-import { collectionRepository } from "#modules/collections/repositories/collectionRepository.js";
 
 const IMDB_PERSON_REGEX = /^nm\d+$/;
 
@@ -46,46 +46,23 @@ const formatPaginatedResult = (result, mapper) => {
   };
 };
 
-async function validateReferences(payload) {
-  const castPersonIds = new Set();
-  const collectionIds = new Set();
-
-  if (Array.isArray(payload.credits?.cast)) {
-    payload.credits.cast.forEach((item) => {
-      if (item?.person) castPersonIds.add(String(item.person));
-    });
-  }
-
-  if (Array.isArray(payload.collections)) {
-    payload.collections.forEach((item) => {
-      const id = item?.collectionRef || item?.collection;
-      if (id) collectionIds.add(String(id));
-    });
-  }
-
-  for (const id of castPersonIds) {
-    if (!isValidObjectId(id))
-      throw new BadRequestError(`Invalid Cast Person ID: ${id}`);
-  }
-  for (const id of collectionIds) {
-    if (!isValidObjectId(id))
-      throw new BadRequestError(`Invalid Collection ID: ${id}`);
-  }
-
-  const [personExist, collectionsExist] = await Promise.all([
-    personRepository.existsByIds(Array.from(castPersonIds)),
-    collectionRepository.existsByIds(Array.from(collectionIds)),
-  ]);
-
-  if (!personExist)
-    throw new BadRequestError(
-      "One or more specified Cast members do not exist",
-    );
-  if (!collectionsExist)
-    throw new BadRequestError("One or more specified Collections do not exist");
-}
-
 export const mediaService = {
+  async getFeaturedSlider(limit = 10) {
+    const items = await mediaRepository.findFeaturedSlider(limit);
+    return safeMap(items, toMediaSliderDto);
+  },
+
+  async updateSliderItems(items) {
+    const payload = Array.isArray(items) ? items : items?.items || [];
+    const result = await mediaRepository.updateSliderOrder(payload);
+
+    return {
+      success: true,
+      message: "Slider items updated successfully",
+      count: result.count || 0,
+    };
+  },
+
   async getAllMedia(query = {}) {
     const result = await mediaRepository.findAll(normalizeQueryObject(query));
     return formatPaginatedResult(result, toMediaListDto);
@@ -117,35 +94,44 @@ export const mediaService = {
   },
 
   async getTop10(query = {}) {
-    const items = await mediaRepository.findTop10(normalizeQueryObject(query));
-    return formatPaginatedResult(items, toMediaListDto);
+    const result = await mediaRepository.findAll({
+      ...normalizeQueryObject(query),
+      isTop10: true,
+      sort: "top-imdb",
+    });
+    return formatPaginatedResult(result, toMediaListDto);
   },
 
   async getTopImdb(query = {}) {
-    const items = await mediaRepository.findTopImdb(
-      normalizeQueryObject(query),
-    );
-    return formatPaginatedResult(items, toMediaListDto);
+    const result = await mediaRepository.findAll({
+      ...normalizeQueryObject(query),
+      sort: "top-imdb",
+    });
+    return formatPaginatedResult(result, toMediaListDto);
   },
 
   async getUpcoming(query = {}) {
-    const items = await mediaRepository.findUpcoming(
-      normalizeQueryObject(query),
-    );
-    return formatPaginatedResult(items, toMediaListDto);
+    const result = await mediaRepository.findAll({
+      ...normalizeQueryObject(query),
+      isUpcoming: true,
+      sort: "upcoming",
+    });
+    return formatPaginatedResult(result, toMediaListDto);
   },
 
   async getAnimations(query = {}) {
-    const items = await mediaRepository.findAnimations(
-      normalizeQueryObject(query),
-    );
-    return formatPaginatedResult(items, toMediaListDto);
+    const result = await mediaRepository.findAll({
+      ...normalizeQueryObject(query),
+      genre: "Animation",
+    });
+    return formatPaginatedResult(result, toMediaListDto);
   },
 
   async getPersianDubbed(query = {}) {
-    const result = await mediaRepository.findPersianDubbed(
-      normalizeQueryObject(query),
-    );
+    const result = await mediaRepository.findAll({
+      ...normalizeQueryObject(query),
+      hasPersianDub: true,
+    });
     return formatPaginatedResult(result, toMediaListDto);
   },
 
@@ -157,7 +143,7 @@ export const mediaService = {
       };
     }
 
-    const result = await mediaRepository.findFilmographyByPersonId(
+    const result = await mediaRepository.findFilmographyByPersonImdbId(
       personObjectId,
       normalizeQueryObject(query),
     );

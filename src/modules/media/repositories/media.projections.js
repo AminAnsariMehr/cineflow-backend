@@ -52,5 +52,40 @@ export const COLLECTION_TIMELINE_PROJECTION = {
   collections: 1,
 };
 
+// export const MEDIA_SLIDER_PROJECTION = {
+//   _id: 1,
+//   slug: 1,
+//   type: 1,
+//   title: 1,
+//   originalTitle: 1,
+//   summary: 1,
+//   releaseYear: 1,
+//   ageRating: 1,
+//   duration: 1,
+//   genres: 1,
+//   "assets.poster": 1,
+//   rating: 1,
+//   featuredOrder: 1,
+//   isExclusive: 1,
+// };
+
+export const MEDIA_SLIDER_PROJECTION = {
+  _id: 1,
+  imdbId: 1,
+  slug: 1,
+  type: 1,
+  title: 1,
+  originalTitle: 1,
+  summary: 1,
+  releaseYear: 1,
+  ageRating: 1,
+  duration: 1,
+  genres: 1,
+  assets: 1, // واکشی کامل assets برای جلوگیری از undefined بودن مسیرها
+  rating: 1,
+  featuredOrder: 1,
+  isExclusive: 1,
+};
+
 export const mediaListProjection = MEDIA_LIST_PROJECTION;
 export const mediaDetailsProjection = MEDIA_DETAILS_PROJECTION;

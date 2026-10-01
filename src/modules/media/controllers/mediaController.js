@@ -1,6 +1,29 @@
 import { mediaService } from "../services/mediaService.js";
 
 export const mediaController = {
+  async getFeaturedSlider(req, res, next) {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+      const data = await mediaService.getFeaturedSlider(limit);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateSlider(req, res, next) {
+    try {
+      const payload = Array.isArray(req.body)
+        ? req.body
+        : req.body?.mediaIds || req.body?.items || req.body?.ids || [];
+
+      const result = await mediaService.updateSliderItems(payload);
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getAllMedia(req, res, next) {
     try {
       const { data, pagination } = await mediaService.getAllMedia(req.query);

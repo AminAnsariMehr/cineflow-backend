@@ -363,6 +363,19 @@ const mediaSchema = new mongoose.Schema(
         message: "Sources array cannot be empty for movies.",
       },
     },
+
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    featuredOrder: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "featuredOrder must be an integer",
+      },
+    },
   },
   {
     timestamps: true,
@@ -430,6 +443,11 @@ mediaSchema.index(
 mediaSchema.index(
   { "credits.writers.personIMDbId": 1, releaseYear: -1 },
   { name: "idx_writers_person_timeline" },
+);
+
+mediaSchema.index(
+  { isFeatured: 1, featuredOrder: 1, createdAt: -1 },
+  { name: "idx_featured_slider" },
 );
 
 export const Media = mongoose.model("Media", mediaSchema, "media");
