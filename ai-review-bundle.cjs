@@ -12,6 +12,7 @@ const ask = (question) =>
     rl.question(question, (answer) => resolve(answer.trim())),
   );
 
+// اضافه شدن .env به لیست پیش‌فرض
 const DEFAULT_EXTENSIONS = [
   ".vue",
   ".js",
@@ -20,6 +21,7 @@ const DEFAULT_EXTENSIONS = [
   ".tsx",
   ".scss",
   ".css",
+  ".env",
 ];
 
 const DEFAULT_EXCLUDE_DIRS = [
@@ -57,8 +59,18 @@ function shouldExcludeDir(dirName, excludeDirs) {
   return excludeDirs.includes(dirName);
 }
 
+// تابع هوشمند برای بررسی پسوندها و انواع فایل‌های .env
 function shouldIncludeFile(filePath, extensions) {
-  return extensions.includes(path.extname(filePath).toLowerCase());
+  const fileName = path.basename(filePath).toLowerCase();
+  const ext = path.extname(filePath).toLowerCase();
+
+  // اگر کاربر .env را مجاز کرده باشد، تمام حالات .env / .env.local / .env.development پوشش داده می‌شود
+  const allowsEnv = extensions.includes(".env");
+  if (allowsEnv && (fileName === ".env" || fileName.startsWith(".env."))) {
+    return true;
+  }
+
+  return extensions.includes(ext);
 }
 
 function getAllFiles(dir, options, bucket = []) {
