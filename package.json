@@ -23,8 +23,8 @@
     "ch": "git diff > changes.txt",
     "tunnel": "cloudflared tunnel run --protocol http2 cineflow-backend-tunnel",
     "start": "node src/server.js",
-    "seed": "node src/scripts/seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "storage:sync": "rclone copy \"./public/uploads\" \"parspack:c479629/uploads\" --transfers 2 --checkers 4 --tpslimit 4 --tpslimit-burst 1 --retries 20 --low-level-retries 10 --retries-sleep 3s --fast-list --s3-acl public-read --progress"
   },
   "dependencies": {
     "cors": "^2.8.6",
