@@ -12,7 +12,6 @@ const ask = (question) =>
     rl.question(question, (answer) => resolve(answer.trim())),
   );
 
-// اضافه شدن .env به لیست پیش‌فرض
 const DEFAULT_EXTENSIONS = [
   ".vue",
   ".js",
@@ -22,6 +21,8 @@ const DEFAULT_EXTENSIONS = [
   ".scss",
   ".css",
   ".env",
+  ".yml",
+  ".yaml",
 ];
 
 const DEFAULT_EXCLUDE_DIRS = [
