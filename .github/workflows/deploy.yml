@@ -22,5 +22,5 @@ jobs:
             cd /var/www/cineflow-backend
             git pull origin main
             pnpm install --frozen-lockfile
-            pm2 reload api-server --update-env
-            pm2 status
+            pnpx pm2 reload api-server --update-env
+            pnpx pm2 status
