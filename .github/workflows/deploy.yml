@@ -16,6 +16,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: amin
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 2332
           script: |
             set -e
             cd /var/www/cineflow-backend
