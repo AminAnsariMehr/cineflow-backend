@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 import { mediaRepository } from "../repositories/mediaRepository.js";
 import {
   normalizeQueryObject,
@@ -11,6 +13,8 @@ import {
   toMediaSliderDto,
 } from "../mappers/mediaMapper.js";
 import { toFilmographyItemDto } from "../../person/mappers/personMapper.js";
+
+import { Person } from "#modules/person/models/Person.js";
 
 const IMDB_PERSON_REGEX = /^nm\d+$/i;
 
@@ -66,6 +70,54 @@ export const mediaService = {
       error.statusCode = 404;
       throw error;
     }
+    // =====================================================================
+
+    const sections = ["cast", "directors", "writers", "crew"];
+    const missingImdbIds = new Set();
+
+    sections.forEach((sec) => {
+      const list = media.credits?.[sec];
+      if (Array.isArray(list)) {
+        list.forEach((item) => {
+          if (!item.person && item.personIMDbId) {
+            missingImdbIds.add(item.personIMDbId.trim().toLowerCase());
+          }
+        });
+      }
+    });
+
+    if (missingImdbIds.size > 0) {
+      const idsArray = Array.from(missingImdbIds);
+
+      const regexList = idsArray.map((id) => new RegExp(`^${id}$`, "i"));
+
+      const foundPersons = await Person.find({
+        imdbId: { $in: regexList },
+      })
+        .select("imdbId slug name avatar")
+        .lean();
+
+      const personMap = new Map();
+      foundPersons.forEach((p) => {
+        if (p.imdbId) {
+          personMap.set(p.imdbId.toLowerCase().trim(), p);
+        }
+      });
+
+      sections.forEach((sec) => {
+        const list = media.credits?.[sec];
+        if (Array.isArray(list)) {
+          list.forEach((item) => {
+            if (!item.person && item.personIMDbId) {
+              const key = item.personIMDbId.toLowerCase().trim();
+              item.person = personMap.get(key) || null;
+            }
+          });
+        }
+      });
+    }
+
+    // =====================================================================
 
     const collectionTimelinesMap = {};
 

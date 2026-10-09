@@ -8,10 +8,12 @@ export const toPersonSummaryDto = (person) => {
   if (!source) return null;
 
   return {
-    id: getEntityId(source),
     imdbId: source.imdbId ?? null,
     slug: source.slug ?? null,
-    name: source.name ?? { fa: "", en: "" },
+    name: {
+      en: source.name?.en ?? source.en ?? "",
+      fa: source.name?.fa ?? source.fa ?? "",
+    },
     avatar: source.avatar ?? null,
   };
 };
@@ -95,36 +97,55 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
           const person = item.person ? toPersonSummaryDto(item.person) : null;
           return {
             character: item.character ?? { fa: "", en: "" },
-            order: item.order ?? 0,
-            personIMDbId: item.personIMDbId ?? null,
             person,
+            order: item.order ?? 0,
           };
         })
         .filter(Boolean)
     : [];
 
   const directors = Array.isArray(media.credits?.directors)
-    ? media.credits.directors.map((item) => ({
-        personIMDbId: item.personIMDbId ?? null,
-        name: { fa: item.fa || "", en: item.en || "" },
-        person: item.person ? toPersonSummaryDto(item.person) : null,
-      }))
+    ? media.credits.directors
+        .map((item) => {
+          if (item.person) {
+            return toPersonSummaryDto(item.person);
+          }
+          return {
+            imdbId: item.personIMDbId ?? null,
+            slug: null,
+            name: {
+              en: item.name?.en ?? item.en ?? "",
+              fa: item.name?.fa ?? item.fa ?? "",
+            },
+            avatar: null,
+          };
+        })
+        .filter(Boolean)
     : [];
 
   const writers = Array.isArray(media.credits?.writers)
-    ? media.credits.writers.map((item) => ({
-        personIMDbId: item.personIMDbId ?? null,
-        name: { fa: item.fa || "", en: item.en || "" },
-        person: item.person ? toPersonSummaryDto(item.person) : null,
-      }))
+    ? media.credits.writers
+        .map((item) => {
+          if (item.person) {
+            return toPersonSummaryDto(item.person);
+          }
+          return {
+            imdbId: item.personIMDbId ?? null,
+            slug: null,
+            name: {
+              en: item.name?.en ?? item.en ?? "",
+              fa: item.name?.fa ?? item.fa ?? "",
+            },
+            avatar: null,
+          };
+        })
+        .filter(Boolean)
     : [];
 
   const crew = Array.isArray(media.credits?.crew)
     ? media.credits.crew.map((item) => ({
         job: item.job ?? "",
         department: item.department ?? "",
-        name: item.name ?? { fa: "", en: "" },
-        personIMDbId: item.personIMDbId ?? null,
         person: item.person ? toPersonSummaryDto(item.person) : null,
       }))
     : [];
@@ -165,12 +186,7 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
     rating: media.rating ?? null,
     seriesDetails:
       media.type === "series" ? (media.seriesDetails ?? null) : null,
-    credits: {
-      cast,
-      directors,
-      writers,
-      crew,
-    },
+    credits: { cast, directors, writers, crew },
     collections,
     createdAt: media.createdAt ?? null,
     updatedAt: media.updatedAt ?? null,

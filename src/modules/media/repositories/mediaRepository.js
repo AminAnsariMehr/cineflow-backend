@@ -190,28 +190,53 @@ export const mediaRepository = {
           ],
         };
 
-    return await Media.findOne(query)
+    // return await Media.findOne(query)
+    //   .populate({
+    //     path: "credits.cast.person",
+    //     select: "slug name avatar",
+    //   })
+    //   .populate({
+    //     path: "credits.directors.person",
+    //     select: "slug name avatar",
+    //   })
+    //   .populate({
+    //     path: "credits.writers.person",
+    //     select: "slug name avatar",
+    //   })
+    //   .populate({
+    //     path: "credits.crew.person",
+    //     select: "slug name avatar",
+    //   })
+    //   .populate({
+    //     path: "collections.collectionRef",
+    //     select: "slug title assets",
+    //   })
+    //   .lean();
+
+    const media = await Media.findOne(query)
       .populate({
         path: "credits.cast.person",
-        select: "slug name avatar",
+        select: "imdbId slug name avatar",
       })
       .populate({
         path: "credits.directors.person",
-        select: "slug name avatar",
+        select: "imdbId slug name avatar",
       })
       .populate({
         path: "credits.writers.person",
-        select: "slug name avatar",
+        select: "imdbId slug name avatar",
       })
       .populate({
         path: "credits.crew.person",
-        select: "slug name avatar",
+        select: "imdbId slug name avatar",
       })
       .populate({
         path: "collections.collectionRef",
         select: "slug title assets",
       })
       .lean();
+
+    return media;
   },
 
   async findCollectionTimeline(collectionId) {
