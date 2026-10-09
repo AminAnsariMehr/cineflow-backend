@@ -2,9 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-
 import path from "path";
-
 import { env } from "./config/env.js";
 
 // --------------------- Middlewares ---------------------
@@ -14,9 +12,10 @@ import {
 } from "#middlewares/error.middleware.js";
 
 // ----------------------- Module ------------------------
+import "./modules/collection/models/Collection.js";
 import { mediaModule } from "./modules/media/media.module.js";
 import { personModule } from "./modules/person/person.module.js";
-// import { collectionModule } from "./modules/collections/collections.module";
+import { collectionModule } from "./modules/collection/collection.module.js";
 import { seasonsModule } from "./modules/seasons/seasons.module.js";
 
 const app = express();
@@ -77,6 +76,7 @@ app.get("/health", (req, res) => {
 mediaModule(app);
 personModule(app);
 seasonsModule(app);
+collectionModule(app);
 
 // ------ Middleware Registration --------
 app.use(notFoundHandler);

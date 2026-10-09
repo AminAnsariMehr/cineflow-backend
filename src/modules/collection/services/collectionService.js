@@ -1,13 +1,13 @@
 import { collectionRepository } from "../repositories/collectionRepository.js";
-import { mediaRepository } from "#modules/media/repositories/mediaRepository";
-import { toCollectionDto } from "#modules/media/mappers/mediaMapper";
-import { buildPaginationMeta } from "#shared/utils/pagination.util";
+import { mediaRepository } from "#modules/media/repositories/mediaRepository.js";
+import { toCollectionDto } from "../mappers/collectionMapper.js";
+import { buildPaginationMeta } from "#shared/utils/pagination.util.js";
 import {
   normalizeSlug,
   normalizeQueryObject,
 } from "#shared/utils/string.util.js";
-import { NotFoundError, BadRequestError } from "#shared/errors/AppError";
-import { isValidObjectId } from "#shared/utils/objectId.util";
+import { NotFoundError, BadRequestError } from "#shared/errors/AppError.js";
+import { isValidObjectId } from "#shared/utils/objectId.util.js";
 
 export const collectionService = {
   async createCollection(payload) {

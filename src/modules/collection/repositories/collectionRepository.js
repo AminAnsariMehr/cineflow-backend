@@ -1,4 +1,4 @@
-import { MediaCollection } from "#modules/collections/models/Collection.js";
+import { Collection as MediaCollection } from "#modules/collection/models/Collection.js";
 import { normalizePagination } from "#shared/utils/pagination.util.js";
 import { COLLECTION_SUMMARY_PROJECTION } from "#modules/media/repositories/media.projections.js";
 

@@ -12,7 +12,7 @@
     "#middlewares/*": "./src/middlewares/*",
     "#modules/*": "./src/modules/*",
     "#media/*": "./src/modules/media/*",
-    "#collections/*": "./src/modules/collections/*",
+    "#collection/*": "./src/modules/collection/*",
     "#person/*": "./src/modules/person/*",
     "#shared/*": "./src/shared/*",
     "#utils/*": "./src/shared/utils/*"

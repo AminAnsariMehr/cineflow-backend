@@ -4,10 +4,7 @@ import {
   normalizeSlug,
 } from "#shared/utils/string.util.js";
 import { buildPaginationMeta } from "#shared/utils/pagination.util.js";
-import {
-  NotFoundError,
-  BadRequestError,
-} from "../../../shared/errors/AppError.js";
+import { NotFoundError, BadRequestError } from "#shared/errors/AppError.js";
 import {
   toMediaListDto,
   toMediaDetailsDto,
@@ -15,27 +12,11 @@ import {
 } from "../mappers/mediaMapper.js";
 import { toFilmographyItemDto } from "../../person/mappers/personMapper.js";
 
-const IMDB_PERSON_REGEX = /^nm\d+$/;
+const IMDB_PERSON_REGEX = /^nm\d+$/i;
 
 const safeMap = (items, mapper) => {
   if (!Array.isArray(items)) return [];
   return items.map(mapper).filter(Boolean);
-};
-
-const extractId = (value) => {
-  if (value == null) return null;
-
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value.toHexString === "function"
-  ) {
-    return value;
-  }
-
-  if (typeof value === "object") return value._id ?? value.id ?? null;
-
-  return null;
 };
 
 const formatPaginatedResult = (result, mapper) => {
@@ -52,14 +33,17 @@ export const mediaService = {
     return safeMap(items, toMediaSliderDto);
   },
 
-  async updateSliderItems(items) {
-    const payload = Array.isArray(items) ? items : items?.items || [];
-    const result = await mediaRepository.updateSliderOrder(payload);
+  async updateSliderItems(payload) {
+    const items = Array.isArray(payload) ? payload : payload?.items || [];
+    if (!Array.isArray(items)) {
+      throw new BadRequestError("Payload must be an array of slider items.");
+    }
+
+    const result = await mediaRepository.updateSliderOrder(items);
 
     return {
-      success: true,
       message: "Slider items updated successfully",
-      count: result.count || 0,
+      count: result.count,
     };
   },
 
@@ -68,29 +52,37 @@ export const mediaService = {
     return formatPaginatedResult(result, toMediaListDto);
   },
 
-  async getMediaBySlug(slug) {
-    const normalizedSlug = normalizeSlug(slug, { fieldName: "Media slug" });
+  async getMediaByIdentifier(identifier) {
+    if (!identifier) {
+      const error = new Error("Identifier is required");
+      error.statusCode = 400;
+      throw error;
+    }
 
-    if (!normalizedSlug) {
-      throw new BadRequestError(
-        "Media slug is required and must be a valid string",
+    const media = await mediaRepository.findByIdentifier(identifier);
+
+    if (!media) {
+      const error = new Error(`Media not found with identifier: ${identifier}`);
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const collectionTimelinesMap = {};
+
+    if (Array.isArray(media.collections) && media.collections.length > 0) {
+      await Promise.all(
+        media.collections.map(async (col) => {
+          const colId = col.collectionRef?._id ?? col.collectionRef;
+          if (colId) {
+            const timelineDocs =
+              await mediaRepository.findCollectionTimeline(colId);
+            collectionTimelinesMap[String(colId)] = timelineDocs;
+          }
+        }),
       );
     }
 
-    const item = await mediaRepository.findBySlug(normalizedSlug);
-
-    if (!item) {
-      throw new NotFoundError(`Media with slug '${normalizedSlug}' not found`);
-    }
-
-    const rawCollection = item.collectionInfo?.collection;
-    const collectionId = extractId(rawCollection);
-
-    const collectionTimeline = collectionId
-      ? await mediaRepository.findCollectionTimeline(collectionId)
-      : [];
-
-    return toMediaDetailsDto(item, collectionTimeline);
+    return toMediaDetailsDto(media, collectionTimelinesMap);
   },
 
   async getTop10(query = {}) {
@@ -143,7 +135,7 @@ export const mediaService = {
       };
     }
 
-    const result = await mediaRepository.findFilmographyByPersonImdbId(
+    const result = await mediaRepository.findFilmographyByPersonObjectId(
       personObjectId,
       normalizeQueryObject(query),
     );
@@ -163,7 +155,7 @@ export const mediaService = {
   async getFilmographyByPersonImdbId(personIMDbId, query = {}) {
     if (!personIMDbId || !IMDB_PERSON_REGEX.test(personIMDbId)) {
       throw new BadRequestError(
-        "Invalid IMDb Person ID format (expected nm followed by digits)",
+        "Invalid IMDb Person ID format (expected 'nm' followed by digits)",
       );
     }
 
