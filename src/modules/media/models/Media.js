@@ -65,10 +65,16 @@ const assetsSchema = new mongoose.Schema(
 
 const creditPersonSchema = new mongoose.Schema(
   {
+    person: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Person",
+      default: null,
+    },
     personIMDbId: {
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
       match: [
         /^nm\d+$/,
         "Invalid person IMDb ID format (expected nm followed by digits)",
@@ -82,10 +88,16 @@ const creditPersonSchema = new mongoose.Schema(
 
 const castSchema = new mongoose.Schema(
   {
+    person: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Person",
+      default: null,
+    },
     personIMDbId: {
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
       match: [
         /^nm\d+$/,
         "Invalid cast person IMDb ID format (expected nm followed by digits)",
@@ -99,9 +111,49 @@ const castSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
+      default: 0,
       validate: {
         validator: Number.isInteger,
         message: "Cast order must be an integer",
+      },
+    },
+  },
+  { _id: false, autoIndex: false },
+);
+
+const crewSchema = new mongoose.Schema(
+  {
+    person: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Person",
+      default: null,
+    },
+    personIMDbId: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true,
+    },
+    job: { type: String, trim: true, default: "" },
+    department: { type: String, trim: true, default: "" },
+    name: { type: localizedStringSchema, default: () => ({ fa: "", en: "" }) },
+  },
+  { _id: false, autoIndex: false },
+);
+
+const mediaCollectionItemSchema = new mongoose.Schema(
+  {
+    collectionRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Collection",
+      required: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Order must be an integer",
       },
     },
   },
@@ -156,11 +208,12 @@ const mediaSchema = new mongoose.Schema(
   {
     imdbId: {
       type: String,
-      required: true,
+      required: [true, "IMDb ID is required"],
       trim: true,
+      lowercase: true,
       match: [
-        /^tt\d+$/,
-        "Invalid media IMDb ID format (expected tt followed by digits)",
+        /^tt\d{7,}$/,
+        "Invalid IMDb ID format (must start with 'tt' followed by at least 7 digits)",
       ],
     },
     slug: {
@@ -177,6 +230,11 @@ const mediaSchema = new mongoose.Schema(
     title: {
       type: localizedStringRequiredSchema,
       required: true,
+    },
+    originalTitle: {
+      type: String,
+      trim: true,
+      default: "",
     },
     summary: {
       type: localizedStringSchema,
@@ -197,7 +255,6 @@ const mediaSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-
     duration: {
       type: Number,
       default: undefined,
@@ -217,7 +274,6 @@ const mediaSchema = new mongoose.Schema(
         message: "Duration must be a positive integer representing minutes",
       },
     },
-
     genres: {
       type: localizedStringArraySchema,
       default: () => ({ en: [], fa: [] }),
@@ -235,7 +291,7 @@ const mediaSchema = new mongoose.Schema(
       default: false,
     },
     collections: {
-      type: [{ type: String, trim: true }],
+      type: [mediaCollectionItemSchema],
       default: [],
     },
     isTop10: {
@@ -286,53 +342,21 @@ const mediaSchema = new mongoose.Schema(
       },
     },
     awardsSummary: {
-      oscarWins: {
-        type: Number,
-        min: 0,
-        default: 0,
-        validate: {
-          validator: Number.isInteger,
-          message: "oscarWins must be an integer",
-        },
-      },
-      oscarNominations: {
-        type: Number,
-        min: 0,
-        default: 0,
-        validate: {
-          validator: Number.isInteger,
-          message: "oscarNominations must be an integer",
-        },
-      },
-      totalWins: {
-        type: Number,
-        min: 0,
-        default: 0,
-        validate: {
-          validator: Number.isInteger,
-          message: "totalWins must be an integer",
-        },
-      },
-      totalNominations: {
-        type: Number,
-        min: 0,
-        default: 0,
-        validate: {
-          validator: Number.isInteger,
-          message: "totalNominations must be an integer",
-        },
-      },
+      oscarWins: { type: Number, min: 0, default: 0 },
+      oscarNominations: { type: Number, min: 0, default: 0 },
+      totalWins: { type: Number, min: 0, default: 0 },
+      totalNominations: { type: Number, min: 0, default: 0 },
     },
     credits: {
       directors: { type: [creditPersonSchema], default: [] },
       writers: { type: [creditPersonSchema], default: [] },
       cast: { type: [castSchema], default: [] },
+      crew: { type: [crewSchema], default: [] },
     },
     assets: {
       type: assetsSchema,
       required: true,
     },
-
     seriesDetails: {
       type: seriesDetailsSchema,
       default: undefined,
@@ -343,7 +367,6 @@ const mediaSchema = new mongoose.Schema(
         "seriesDetails is required for series",
       ],
     },
-
     sources: {
       type: [mediaSourceSchema],
       default: undefined,
@@ -363,7 +386,6 @@ const mediaSchema = new mongoose.Schema(
         message: "Sources array cannot be empty for movies.",
       },
     },
-
     isFeatured: {
       type: Boolean,
       default: false,
@@ -409,14 +431,17 @@ mediaSchema.index(
   { name: "idx_type_createdAt_id" },
 );
 mediaSchema.index(
-  { type: 1, releaseYear: -1 },
-  { name: "idx_type_releaseYear" },
+  { type: 1, releaseYear: -1, _id: -1 },
+  { name: "idx_type_releaseYear_id" },
 );
 mediaSchema.index(
-  { isTop10: 1, "rating.imdb": -1 },
+  { isTop10: 1, "rating.imdb": -1, _id: -1 },
   { name: "idx_top10_rating" },
 );
-mediaSchema.index({ isUpcoming: 1, releaseYear: 1 }, { name: "idx_upcoming" });
+mediaSchema.index(
+  { isUpcoming: 1, releaseYear: 1, _id: -1 },
+  { name: "idx_upcoming" },
+);
 mediaSchema.index(
   { "genres.en": 1, createdAt: -1, _id: -1 },
   { name: "idx_genres_en_sort" },
@@ -434,17 +459,27 @@ mediaSchema.index(
   { "credits.cast.personIMDbId": 1, releaseYear: -1, createdAt: -1 },
   { name: "idx_cast_person_timeline" },
 );
-
+mediaSchema.index(
+  { "credits.cast.person": 1, releaseYear: -1, _id: -1 },
+  { name: "idx_cast_person_objectid" },
+);
 mediaSchema.index(
   { "credits.directors.personIMDbId": 1, releaseYear: -1 },
   { name: "idx_directors_person_timeline" },
 );
-
 mediaSchema.index(
   { "credits.writers.personIMDbId": 1, releaseYear: -1 },
   { name: "idx_writers_person_timeline" },
 );
+mediaSchema.index(
+  { "credits.crew.person": 1, releaseYear: -1 },
+  { name: "idx_crew_person_objectid" },
+);
 
+mediaSchema.index(
+  { "collections.collectionRef": 1, "collections.order": 1 },
+  { name: "idx_collections_ref_order" },
+);
 mediaSchema.index(
   { isFeatured: 1, featuredOrder: 1, createdAt: -1 },
   { name: "idx_featured_slider" },

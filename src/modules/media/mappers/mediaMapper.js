@@ -8,9 +8,12 @@ export const toPersonSummaryDto = (person) => {
   if (!source) return null;
 
   return {
-    id: getEntityId(source),
+    imdbId: source.imdbId ?? null,
     slug: source.slug ?? null,
-    name: source.name ?? { fa: "", en: "" },
+    name: {
+      en: source.name?.en ?? source.en ?? "",
+      fa: source.name?.fa ?? source.fa ?? "",
+    },
     avatar: source.avatar ?? null,
   };
 };
@@ -28,17 +31,19 @@ export const toCollectionDto = (collection) => {
   };
 };
 
-export const toCollectionTimelineItemDto = (mediaDoc, collectionId = null) => {
+export const toCollectionTimelineItemDto = (
+  mediaDoc,
+  targetCollectionId = null,
+) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
 
   let order = null;
-  if (collectionId && Array.isArray(media.collections)) {
-    const matched = media.collections.find(
-      (c) =>
-        String(c.collectionRef?._id || c.collectionRef) ===
-        String(collectionId),
-    );
+  if (targetCollectionId && Array.isArray(media.collections)) {
+    const matched = media.collections.find((c) => {
+      const colId = c.collectionRef?._id ?? c.collectionRef;
+      return String(colId) === String(targetCollectionId);
+    });
     if (matched) order = matched.order;
   }
 
@@ -59,6 +64,7 @@ export const toMediaListDto = (mediaDoc) => {
 
   return {
     id: getEntityId(media),
+    imdbId: media.imdbId ?? null,
     slug: media.slug ?? null,
     type: media.type ?? null,
     title: media.title ?? { fa: "", en: "" },
@@ -66,9 +72,9 @@ export const toMediaListDto = (mediaDoc) => {
     releaseYear: media.releaseYear ?? null,
     ageRating: media.ageRating ?? null,
     duration: media.type === "movie" ? (media.duration ?? null) : null,
-    genres: Array.isArray(media.genres) ? media.genres : [],
-    countries: Array.isArray(media.countries) ? media.countries : [],
-    languages: Array.isArray(media.languages) ? media.languages : [],
+    genres: media.genres ?? { en: [], fa: [] },
+    countries: media.countries ?? { en: [], fa: [] },
+    languages: media.languages ?? { en: [], fa: [] },
     assets: media.assets ?? {},
     poster: getPosterUrl(media.assets),
     rating: media.rating ?? null,
@@ -77,6 +83,7 @@ export const toMediaListDto = (mediaDoc) => {
     isTop10: Boolean(media.isTop10),
     isUpcoming: Boolean(media.isUpcoming),
     isExclusive: Boolean(media.isExclusive),
+    hasPersianDub: Boolean(media.hasPersianDub),
   };
 };
 
@@ -87,30 +94,61 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
   const cast = Array.isArray(media.credits?.cast)
     ? media.credits.cast
         .map((item) => {
-          const person = toPersonSummaryDto(item?.person);
-          if (!person) return null;
-
+          const person = item.person ? toPersonSummaryDto(item.person) : null;
           return {
-            character: item.character ?? null,
-            order: item.order ?? null,
+            character: item.character ?? { fa: "", en: "" },
             person,
+            order: item.order ?? 0,
           };
         })
         .filter(Boolean)
     : [];
 
-  // کارگردان‌ها فقط شامل نام رشته‌ای
   const directors = Array.isArray(media.credits?.directors)
     ? media.credits.directors
+        .map((item) => {
+          if (item.person) {
+            return toPersonSummaryDto(item.person);
+          }
+          return {
+            imdbId: item.personIMDbId ?? null,
+            slug: null,
+            name: {
+              en: item.name?.en ?? item.en ?? "",
+              fa: item.name?.fa ?? item.fa ?? "",
+            },
+            avatar: null,
+          };
+        })
+        .filter(Boolean)
     : [];
 
-  // نویسنده‌ها فقط شامل نام رشته‌ای
   const writers = Array.isArray(media.credits?.writers)
     ? media.credits.writers
+        .map((item) => {
+          if (item.person) {
+            return toPersonSummaryDto(item.person);
+          }
+          return {
+            imdbId: item.personIMDbId ?? null,
+            slug: null,
+            name: {
+              en: item.name?.en ?? item.en ?? "",
+              fa: item.name?.fa ?? item.fa ?? "",
+            },
+            avatar: null,
+          };
+        })
+        .filter(Boolean)
     : [];
 
-  // سایر عوامل به صورت { role, name }
-  const crew = Array.isArray(media.credits?.crew) ? media.credits.crew : [];
+  const crew = Array.isArray(media.credits?.crew)
+    ? media.credits.crew.map((item) => ({
+        job: item.job ?? "",
+        department: item.department ?? "",
+        person: item.person ? toPersonSummaryDto(item.person) : null,
+      }))
+    : [];
 
   const collections = Array.isArray(media.collections)
     ? media.collections
@@ -131,6 +169,7 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
 
   return {
     id: getEntityId(media),
+    imdbId: media.imdbId ?? null,
     slug: media.slug ?? null,
     type: media.type ?? null,
     title: media.title ?? { fa: "", en: "" },
@@ -139,57 +178,24 @@ export const toMediaDetailsDto = (mediaDoc, collectionTimelines = {}) => {
     ageRating: media.ageRating ?? null,
     duration: media.type === "movie" ? (media.duration ?? null) : null,
     summary: media.summary ?? { fa: "", en: "" },
-    genres: Array.isArray(media.genres) ? media.genres : [],
-    countries: Array.isArray(media.countries) ? media.countries : [],
-    languages: Array.isArray(media.languages) ? media.languages : [],
+    genres: media.genres ?? { en: [], fa: [] },
+    countries: media.countries ?? { en: [], fa: [] },
+    languages: media.languages ?? { en: [], fa: [] },
     assets: media.assets ?? {},
     poster: getPosterUrl(media.assets),
     rating: media.rating ?? null,
     seriesDetails:
       media.type === "series" ? (media.seriesDetails ?? null) : null,
-    credits: {
-      cast,
-      directors,
-      writers,
-      crew,
-    },
+    credits: { cast, directors, writers, crew },
     collections,
     createdAt: media.createdAt ?? null,
     updatedAt: media.updatedAt ?? null,
     isTop10: Boolean(media.isTop10),
     isUpcoming: Boolean(media.isUpcoming),
     isExclusive: Boolean(media.isExclusive),
+    hasPersianDub: Boolean(media.hasPersianDub),
   };
 };
-
-// export const toMediaSliderDto = (mediaDoc) => {
-//   const media = toPlainObject(mediaDoc);
-//   if (!media) return null;
-
-//   return {
-//     id: getEntityId(media),
-//     slug: media.slug ?? null,
-//     type: media.type ?? null,
-//     title: media.title ?? { fa: "", en: "" },
-//     originalTitle: media.originalTitle ?? "",
-//     summary: media.summary ?? { fa: "", en: "" },
-//     releaseYear: media.releaseYear ?? null,
-//     ageRating: media.ageRating ?? null,
-//     duration: media.type === "movie" ? (media.duration ?? null) : null,
-//     genres: Array.isArray(media.genres) ? media.genres : [],
-//     poster: {
-//       vertical: media.assets?.poster?.vertical ?? null,
-//       horizontal: media.assets?.poster?.horizontal ?? null,
-//       backdrop: media.assets?.poster?.backdrop ?? null,
-//     },
-//     rating: {
-//       imdb: media.rating?.imdb ?? null,
-//       userRating: media.rating?.userRating ?? 0,
-//     },
-//     isExclusive: Boolean(media.isExclusive),
-//     order: media.featuredOrder ?? 0,
-//   };
-// };
 
 export const toMediaSliderDto = (mediaDoc) => {
   const media = toPlainObject(mediaDoc);
@@ -197,8 +203,8 @@ export const toMediaSliderDto = (mediaDoc) => {
 
   return {
     id: getEntityId(media),
-    slug: media.slug ?? null,
     imdbId: media.imdbId ?? null,
+    slug: media.slug ?? null,
     type: media.type ?? null,
     title: media.title ?? { fa: "", en: "" },
     originalTitle: media.originalTitle ?? "",
@@ -206,11 +212,9 @@ export const toMediaSliderDto = (mediaDoc) => {
     releaseYear: media.releaseYear ?? null,
     ageRating: media.ageRating ?? null,
     duration: media.type === "movie" ? (media.duration ?? null) : null,
-    genres: Array.isArray(media.genres) ? media.genres : [],
-    // فیلد اصلی استاتیک هماهنگ با بقیه کنترلرها
+    genres: media.genres ?? { en: [], fa: [] },
     assets: media.assets ?? {},
     poster: getPosterUrl(media.assets),
-    // تصاویر اختصاصی اسلایدر با اولویت افقی/بک‌دراپ
     sliderImages: {
       vertical: media.assets?.poster?.vertical ?? null,
       horizontal: media.assets?.poster?.horizontal ?? null,

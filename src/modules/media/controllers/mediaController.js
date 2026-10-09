@@ -1,13 +1,24 @@
 import { mediaService } from "../services/mediaService.js";
+import { BadRequestError } from "#shared/errors/AppError.js";
 
 export const mediaController = {
   async getFeaturedSlider(req, res, next) {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+      const rawLimit = req.query.limit;
+      let limit = 10;
+      if (rawLimit !== undefined) {
+        limit = parseInt(rawLimit, 10);
+        if (Number.isNaN(limit) || limit < 1) {
+          throw new BadRequestError(
+            "Query parameter 'limit' must be a positive integer.",
+          );
+        }
+      }
+
       const data = await mediaService.getFeaturedSlider(limit);
-      res.json({ success: true, data });
+      return res.status(200).json({ success: true, data });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
@@ -15,28 +26,39 @@ export const mediaController = {
     try {
       const payload = Array.isArray(req.body)
         ? req.body
-        : req.body?.mediaIds || req.body?.items || req.body?.ids || [];
+        : req.body?.mediaIds || req.body?.items || req.body?.ids;
+
+      if (!payload || !Array.isArray(payload)) {
+        throw new BadRequestError(
+          "Request body must be an array or contain an array field ('items', 'mediaIds', or 'ids').",
+        );
+      }
 
       const result = await mediaService.updateSliderItems(payload);
-      return res.status(200).json(result);
+      return res.status(200).json({ success: true, ...result });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
   async getAllMedia(req, res, next) {
     try {
       const { data, pagination } = await mediaService.getAllMedia(req.query);
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
-  async getMediaBySlug(req, res, next) {
+  async getMediaByIdentifier(req, res, next) {
     try {
-      const data = await mediaService.getMediaBySlug(req.params.slug);
-      res.json({ success: true, data });
+      const { identifier } = req.params;
+      const media = await mediaService.getMediaByIdentifier(identifier);
+
+      return res.status(200).json({
+        success: true,
+        data: media,
+      });
     } catch (error) {
       next(error);
     }
@@ -45,36 +67,36 @@ export const mediaController = {
   async getTop10(req, res, next) {
     try {
       const { data, pagination } = await mediaService.getTop10(req.query);
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
   async getTopImdb(req, res, next) {
     try {
       const { data, pagination } = await mediaService.getTopImdb(req.query);
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
   async getUpcoming(req, res, next) {
     try {
       const { data, pagination } = await mediaService.getUpcoming(req.query);
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
   async getAnimations(req, res, next) {
     try {
       const { data, pagination } = await mediaService.getAnimations(req.query);
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
@@ -83,9 +105,9 @@ export const mediaController = {
       const { data, pagination } = await mediaService.getPersianDubbed(
         req.query,
       );
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 
@@ -97,9 +119,9 @@ export const mediaController = {
           personIMDbId,
           req.query,
         );
-      res.json({ success: true, data, pagination });
+      return res.status(200).json({ success: true, data, pagination });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   },
 };
