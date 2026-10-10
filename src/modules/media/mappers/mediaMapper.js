@@ -201,29 +201,18 @@ export const toMediaSliderDto = (mediaDoc) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
 
+  console.log(media.countries);
+
   return {
     id: getEntityId(media),
     imdbId: media.imdbId ?? null,
     slug: media.slug ?? null,
-    type: media.type ?? null,
     title: media.title ?? { fa: "", en: "" },
-    originalTitle: media.originalTitle ?? "",
-    summary: media.summary ?? { fa: "", en: "" },
     releaseYear: media.releaseYear ?? null,
     ageRating: media.ageRating ?? null,
-    duration: media.type === "movie" ? (media.duration ?? null) : null,
-    genres: media.genres ?? { en: [], fa: [] },
-    assets: media.assets ?? {},
-    poster: getPosterUrl(media.assets),
-    sliderImages: {
-      vertical: media.assets?.poster?.vertical ?? null,
-      horizontal: media.assets?.poster?.horizontal ?? null,
-      backdrop: media.assets?.poster?.backdrop ?? null,
-    },
-    rating: {
-      imdb: media.rating?.imdb ?? null,
-      userRating: media.rating?.userRating ?? 0,
-    },
+    poster: media.assets.poster ?? {},
+    countries: media.countries,
+    rating: media.rating,
     isExclusive: Boolean(media.isExclusive),
     order: media.featuredOrder ?? 0,
   };
