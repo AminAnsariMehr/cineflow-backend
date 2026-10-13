@@ -47,12 +47,30 @@ export const toPersonDetailsDto = (personDoc, relatedInfoMap = null) => {
       totalWins: person.awardsSummary?.totalWins ?? 0,
       totalNominations: person.awardsSummary?.totalNominations ?? 0,
     },
+    // personalRelationships: Array.isArray(person.personalRelationships)
+    //   ? person.personalRelationships.map((rel) => {
+    //       const match =
+    //         rel?.imdbId && relatedInfoMap
+    //           ? relatedInfoMap.get(rel.imdbId)
+    //           : null;
+    //       return {
+    //         type: normalizeRelationshipType(rel?.type),
+    //         name: rel?.name ?? "",
+    //         imdbId: rel?.imdbId ?? null,
+    //         avatar: match?.avatar || null,
+    //         slug: match?.slug || null,
+    //         attributes: rel?.attributes ?? null,
+    //       };
+    //     })
+    //   : [],
+
     personalRelationships: Array.isArray(person.personalRelationships)
       ? person.personalRelationships.map((rel) => {
+          const hasGet =
+            relatedInfoMap && typeof relatedInfoMap.get === "function";
           const match =
-            rel?.imdbId && relatedInfoMap
-              ? relatedInfoMap.get(rel.imdbId)
-              : null;
+            rel?.imdbId && hasGet ? relatedInfoMap.get(rel.imdbId) : null;
+
           return {
             type: normalizeRelationshipType(rel?.type),
             name: rel?.name ?? "",
@@ -63,6 +81,7 @@ export const toPersonDetailsDto = (personDoc, relatedInfoMap = null) => {
           };
         })
       : [],
+
     avatar: person.avatar ?? "",
     images: Array.isArray(person.images) ? person.images.slice(0, 5) : [],
     createdAt: person.createdAt ?? null,

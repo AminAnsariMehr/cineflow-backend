@@ -49,10 +49,18 @@ const resolveUniqueSlugOptimized = async (baseSlug, currentId = null) => {
 };
 
 export const personService = {
+  // async getAllPerson(queryParams) {
+  //   const { items, pagination } = await personRepository.findAll(queryParams);
+  //   return {
+  //     data: items.map(toPersonDetailsDto),
+  //     pagination,
+  //   };
+  // },
+
   async getAllPerson(queryParams) {
     const { items, pagination } = await personRepository.findAll(queryParams);
     return {
-      data: items.map(toPersonDetailsDto),
+      data: items.map((item) => toPersonDetailsDto(item)),
       pagination,
     };
   },
