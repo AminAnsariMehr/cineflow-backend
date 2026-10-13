@@ -1,7 +1,7 @@
 import { getEntityId, toPlainObject } from "#shared/mongoose/entityId.js";
 import { normalizeRelationshipType } from "../utils/relationship.util.js";
 
-export const toPersonDetailsDto = (personDoc) => {
+export const toPersonDetailsDto = (personDoc, relatedInfoMap = null) => {
   const person = toPlainObject(personDoc);
   if (!person) return null;
 
@@ -48,12 +48,20 @@ export const toPersonDetailsDto = (personDoc) => {
       totalNominations: person.awardsSummary?.totalNominations ?? 0,
     },
     personalRelationships: Array.isArray(person.personalRelationships)
-      ? person.personalRelationships.map((rel) => ({
-          type: normalizeRelationshipType(rel?.type),
-          name: rel?.name ?? "",
-          imdbId: rel?.imdbId ?? null,
-          attributes: rel?.attributes ?? null,
-        }))
+      ? person.personalRelationships.map((rel) => {
+          const match =
+            rel?.imdbId && relatedInfoMap
+              ? relatedInfoMap.get(rel.imdbId)
+              : null;
+          return {
+            type: normalizeRelationshipType(rel?.type),
+            name: rel?.name ?? "",
+            imdbId: rel?.imdbId ?? null,
+            avatar: match?.avatar || null,
+            slug: match?.slug || null,
+            attributes: rel?.attributes ?? null,
+          };
+        })
       : [],
     avatar: person.avatar ?? "",
     images: Array.isArray(person.images) ? person.images.slice(0, 5) : [],

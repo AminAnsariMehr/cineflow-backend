@@ -80,6 +80,14 @@ export const personRepository = {
     return Person.findOne({ $or: conditions }, projection).lean();
   },
 
+  async findAvatarsByImdbIds(imdbIds = []) {
+    if (!imdbIds.length) return [];
+    return Person.find(
+      { imdbId: { $in: imdbIds } },
+      { imdbId: 1, avatar: 1, slug: 1, _id: 0 },
+    ).lean();
+  },
+
   async findAll(queryParams = {}, projection = DEFAULT_PERSON_PROJECTION) {
     const { page, limit, skip } = normalizePagination(queryParams);
     const filter = {};

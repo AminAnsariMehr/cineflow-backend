@@ -65,24 +65,37 @@ export const personService = {
       );
     }
 
-    let filmography = [];
-    if (
+    const relatedImdbIds = Array.isArray(person.personalRelationships)
+      ? [
+          ...new Set(
+            person.personalRelationships.map((r) => r.imdbId).filter(Boolean),
+          ),
+        ]
+      : [];
+
+    const [relatedProfiles, filmographyResult] = await Promise.all([
+      relatedImdbIds.length > 0
+        ? personRepository.findAvatarsByImdbIds(relatedImdbIds)
+        : Promise.resolve([]),
       person.imdbId &&
       typeof mediaService?.getFilmographyByPersonImdbId === "function"
-    ) {
-      try {
-        const filmographyResult =
-          await mediaService.getFilmographyByPersonImdbId(person.imdbId, {
-            limit: 100,
-          });
-        filmography = filmographyResult?.data ?? [];
-      } catch {
-        filmography = [];
-      }
-    }
+        ? mediaService
+            .getFilmographyByPersonImdbId(person.imdbId, { limit: 100 })
+            .catch(() => ({ data: [] }))
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const relatedInfoMap = new Map(
+      relatedProfiles.map((p) => [
+        p.imdbId,
+        { avatar: p.avatar, slug: p.slug },
+      ]),
+    );
+
+    const filmography = filmographyResult?.data ?? [];
 
     return {
-      ...toPersonDetailsDto(person),
+      ...toPersonDetailsDto(person, relatedInfoMap),
       filmography,
     };
   },
