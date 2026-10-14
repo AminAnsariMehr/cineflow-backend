@@ -92,6 +92,15 @@ const parseMultipartBody = (body) => {
     );
   }
 
+  if ("isComplete" in payload) {
+    if (typeof payload.isComplete === "string") {
+      payload.isComplete =
+        payload.isComplete === "true" || payload.isComplete === "1";
+    } else {
+      payload.isComplete = Boolean(payload.isComplete);
+    }
+  }
+
   return payload;
 };
 

@@ -47,63 +47,61 @@ export const toPersonDetailsDto = (personDoc, relatedInfoMap = null) => {
       totalWins: person.awardsSummary?.totalWins ?? 0,
       totalNominations: person.awardsSummary?.totalNominations ?? 0,
     },
-    // personalRelationships: Array.isArray(person.personalRelationships)
-    //   ? person.personalRelationships.map((rel) => {
-    //       const match =
-    //         rel?.imdbId && relatedInfoMap
-    //           ? relatedInfoMap.get(rel.imdbId)
-    //           : null;
-    //       return {
-    //         type: normalizeRelationshipType(rel?.type),
-    //         name: rel?.name ?? "",
-    //         imdbId: rel?.imdbId ?? null,
-    //         avatar: match?.avatar || null,
-    //         slug: match?.slug || null,
-    //         attributes: rel?.attributes ?? null,
-    //       };
-    //     })
-    //   : [],
-
     personalRelationships: Array.isArray(person.personalRelationships)
       ? person.personalRelationships.map((rel) => {
-          const hasGet =
-            relatedInfoMap && typeof relatedInfoMap.get === "function";
           const match =
-            rel?.imdbId && hasGet ? relatedInfoMap.get(rel.imdbId) : null;
-
+            rel?.imdbId && relatedInfoMap
+              ? relatedInfoMap.get(rel.imdbId)
+              : null;
           return {
             type: normalizeRelationshipType(rel?.type),
             name: rel?.name ?? "",
             imdbId: rel?.imdbId ?? null,
-            avatar: match?.avatar || null,
-            slug: match?.slug || null,
+            avatar: match?.avatar ?? null,
+            slug: match?.slug ?? null,
             attributes: rel?.attributes ?? null,
+            isComplete: Boolean(match?.isComplete),
           };
         })
       : [],
 
     avatar: person.avatar ?? "",
     images: Array.isArray(person.images) ? person.images.slice(0, 5) : [],
+    isComplete: Boolean(person.isComplete),
     createdAt: person.createdAt ?? null,
     updatedAt: person.updatedAt ?? null,
   };
 };
 
-export const toFilmographyItemDto = (mediaDoc, personObjectId) => {
+export const toFilmographyItemDto = (mediaDoc, personIdentifier) => {
   const media = toPlainObject(mediaDoc);
   if (!media) return null;
 
-  const targetId = String(personObjectId);
+  const target = String(personIdentifier?._id ?? personIdentifier ?? "");
+  const targetImdb = personIdentifier?.imdbId
+    ? String(personIdentifier.imdbId).toLowerCase()
+    : null;
 
-  const matchedCast = (media.credits?.cast || []).filter((c) => {
-    const castId = c?.person?._id ?? c?.person;
-    return castId && String(castId) === targetId;
-  });
+  const matchesPerson = (ref) => {
+    if (!ref) return false;
+    const refId = String(ref?._id ?? ref);
+    if (refId === target) return true;
 
-  const matchedCrew = (media.credits?.crew || []).filter((c) => {
-    const crewId = c?.person?._id ?? c?.person;
-    return crewId && String(crewId) === targetId;
-  });
+    if (targetImdb) {
+      const refImdb = String(ref?.imdbId ?? "").toLowerCase();
+      if (refImdb && refImdb === targetImdb) return true;
+      if (refId.toLowerCase() === targetImdb) return true;
+    }
+    return false;
+  };
+
+  const matchedCast = (media.credits?.cast || []).filter((c) =>
+    matchesPerson(c?.person),
+  );
+
+  const matchedCrew = (media.credits?.crew || []).filter((c) =>
+    matchesPerson(c?.person),
+  );
 
   return {
     id: getEntityId(media),

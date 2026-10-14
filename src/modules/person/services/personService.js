@@ -49,14 +49,6 @@ const resolveUniqueSlugOptimized = async (baseSlug, currentId = null) => {
 };
 
 export const personService = {
-  // async getAllPerson(queryParams) {
-  //   const { items, pagination } = await personRepository.findAll(queryParams);
-  //   return {
-  //     data: items.map(toPersonDetailsDto),
-  //     pagination,
-  //   };
-  // },
-
   async getAllPerson(queryParams) {
     const { items, pagination } = await personRepository.findAll(queryParams);
     return {
@@ -96,7 +88,11 @@ export const personService = {
     const relatedInfoMap = new Map(
       relatedProfiles.map((p) => [
         p.imdbId,
-        { avatar: p.avatar, slug: p.slug },
+        {
+          avatar: p.avatar,
+          slug: p.slug,
+          isComplete: Boolean(p.isComplete),
+        },
       ]),
     );
 

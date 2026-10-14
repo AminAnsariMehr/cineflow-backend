@@ -20,6 +20,7 @@ const DEFAULT_PERSON_PROJECTION = {
   starmeterRank: 1,
   awardsSummary: 1,
   personalRelationships: 1,
+  isComplete: 1,
   avatar: 1,
   images: 1,
   createdAt: 1,
@@ -84,7 +85,7 @@ export const personRepository = {
     if (!imdbIds.length) return [];
     return Person.find(
       { imdbId: { $in: imdbIds } },
-      { imdbId: 1, avatar: 1, slug: 1, _id: 0 },
+      { imdbId: 1, avatar: 1, slug: 1, isComplete: 1, _id: 0 },
     ).lean();
   },
 
@@ -97,7 +98,6 @@ export const personRepository = {
       filter.$text = { $search: queryParams.search.trim() };
     }
 
-    // ۱. فیلتر حرفه (اگر ارسال شد از همان، در غیر این‌صورت پیش‌فرض بازیگر)
     const profession = queryParams.profession?.trim();
     if (profession) {
       filter.$or = [
@@ -111,12 +111,10 @@ export const personRepository = {
       ];
     }
 
-    // ۲. حذف رکوردهایی که starmeterRank ندارند تا با سورت صعودی در ابتدای لیست نیایند
     if (!isSearch) {
       filter.starmeterRank = { $ne: null, $gt: 0 };
     }
 
-    // ۳. سورت بر اساس محبوبیت (کمترین رنک استارمتر یعنی محبوب‌ترین)
     const sortCriteria = isSearch
       ? { score: { $meta: "textScore" }, starmeterRank: 1 }
       : { starmeterRank: 1, _id: -1 };

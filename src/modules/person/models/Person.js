@@ -158,6 +158,11 @@ const personSchema = new mongoose.Schema(
       type: [personalRelationshipSchema],
       default: [],
     },
+    isComplete: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     avatar: {
       type: String,
       default: "",
